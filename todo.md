@@ -182,3 +182,24 @@
 - [ ] Test OAuth flows
 - [x] Test activity matching logic
 - [x] Test calendar event sync
+
+
+## OAuth Implementation - New Tasks
+
+### Gmail OAuth Flow
+- [x] Create Gmail OAuth initiation endpoint
+- [x] Implement Gmail OAuth callback handler
+- [x] Add token storage and refresh logic for Gmail
+- [x] Handle OAuth errors and edge cases
+
+### Outlook OAuth Flow
+- [x] Create Outlook OAuth initiation endpoint
+- [x] Implement Outlook OAuth callback handler
+- [x] Add token storage and refresh logic for Outlook
+- [x] Handle OAuth errors and edge cases
+
+### Frontend Integration
+- [x] Update Email Settings page with working OAuth buttons
+- [x] Add OAuth redirect handling
+- [x] Show connection status and errors
+- [ ] Test complete OAuth flow end-to-end

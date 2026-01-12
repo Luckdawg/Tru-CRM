@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -9,6 +10,24 @@ import { toast } from "sonner";
 export default function EmailSettings() {
   const { user, isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
+
+  // Handle OAuth callback messages
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+
+    if (success === 'gmail_connected') {
+      toast.success('Gmail account connected successfully!');
+      window.history.replaceState({}, '', '/email-settings');
+    } else if (success === 'outlook_connected') {
+      toast.success('Outlook account connected successfully!');
+      window.history.replaceState({}, '', '/email-settings');
+    } else if (error) {
+      toast.error(`Connection failed: ${decodeURIComponent(error)}`);
+      window.history.replaceState({}, '', '/email-settings');
+    }
+  }, []);
 
   const { data: connections, isLoading } = trpc.email.connections.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -205,12 +224,15 @@ export default function EmailSettings() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Button className="w-full" disabled>
+                <Button 
+                  className="w-full" 
+                  onClick={() => window.location.href = '/api/oauth/gmail'}
+                >
                   <Mail className="h-4 w-4 mr-2" />
-                  Connect Gmail (OAuth Setup Required)
+                  Connect Gmail
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Requires GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET environment variables
+                  Securely connect your Gmail account via OAuth 2.0
                 </p>
               </CardContent>
             </Card>
@@ -228,12 +250,15 @@ export default function EmailSettings() {
                 </div>
               </CardHeader>
               <CardContent>
-                <Button className="w-full" disabled>
+                <Button 
+                  className="w-full"
+                  onClick={() => window.location.href = '/api/oauth/outlook'}
+                >
                   <Mail className="h-4 w-4 mr-2" />
-                  Connect Outlook (OAuth Setup Required)
+                  Connect Outlook
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Requires OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET environment variables
+                  Securely connect your Microsoft account via OAuth 2.0
                 </p>
               </CardContent>
             </Card>
@@ -273,3 +298,6 @@ export default function EmailSettings() {
     </div>
   );
 }
+
+
+
