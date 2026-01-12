@@ -56,12 +56,12 @@ export default function Opportunities() {
     }
     createOpportunity.mutate({
       opportunityName: oppName,
-      amount: oppAmount,
+      amount: parseFloat(oppAmount) || 0,
       stage: oppStage,
       type: oppType,
       probability: parseInt(oppProbability) || 0,
-      closeDate: oppCloseDate,
-      accountId: null,
+      closeDate: new Date(oppCloseDate),
+      accountId: accounts && accounts.length > 0 ? accounts[0].id : undefined,
       ownerId: user!.id,
     });
   };

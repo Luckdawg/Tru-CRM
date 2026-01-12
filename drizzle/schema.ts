@@ -198,7 +198,7 @@ export type InsertProduct = typeof products.$inferInsert;
 export const opportunities = mysqlTable("opportunities", {
   id: int("id").autoincrement().primaryKey(),
   opportunityName: varchar("opportunityName", { length: 255 }).notNull(),
-  accountId: int("accountId").notNull(),
+  accountId: int("accountId"),
   stage: mysqlEnum("stage", [
     "Discovery",
     "Solution Fit",

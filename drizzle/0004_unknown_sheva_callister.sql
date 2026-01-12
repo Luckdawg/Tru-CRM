@@ -1,0 +1,1 @@
+ALTER TABLE `opportunities` MODIFY COLUMN `accountId` int;

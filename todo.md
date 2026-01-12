@@ -312,3 +312,5 @@
 - [ ] Fix opportunity creation submission - TypeScript build errors (121 errors) preventing JavaScript execution
 - [ ] Resolve tRPC type generation issue - 'reports' router not recognized despite being defined
 - [ ] Fix all create form submissions across CRM (leads, accounts, contacts, opportunities) - blocked by build errors
+- [x] Fix opportunity creation validation errors - accountId optional, closeDate converted to Date
+- [ ] Resolve remaining TypeScript build errors preventing JavaScript execution (118 errors remaining)

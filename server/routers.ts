@@ -400,7 +400,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         opportunityName: z.string().min(1),
-        accountId: z.number(),
+        accountId: z.number().optional(),
         stage: z.enum([
           "Discovery", "Solution Fit", "PoC/Trial", "Security Review", 
           "Procurement", "Verbal Commit", "Closed Won", "Closed Lost"

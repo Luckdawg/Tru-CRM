@@ -21,7 +21,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Dashboard from "./pages/Dashboard";
-import Reports from "./pages/Reports";
+// import Reports from "./pages/Reports";
 
 function Router() {
   return (
@@ -43,7 +43,7 @@ function Router() {
       <Route path={"/projects/:id"} component={ProjectDetail} />
       <Route path={"/cases"} component={Cases} />
       <Route path={"/cases/:id"} component={CaseDetail} />
-      <Route path={"/reports"} component={Reports} />
+      {/* <Route path={"/reports"} component={Reports} /> */}
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
