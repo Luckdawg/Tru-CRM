@@ -5,13 +5,98 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Plus, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 export default function Cases() {
   const { user, isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    caseNumber: "",
+    subject: "",
+    accountId: "",
+    description: "",
+    priority: "Medium" as "Low" | "Medium" | "High" | "Critical",
+    type: "Technical Issue" as "Technical Issue" | "Feature Request" | "Question" | "Bug Report",
+    status: "Open" as "Open" | "In Progress" | "Waiting on Customer" | "Resolved" | "Closed",
+  });
   
   const { data: cases, isLoading } = trpc.cases.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const createMutation = trpc.cases.create.useMutation({
+    onSuccess: () => {
+      utils.cases.list.invalidate();
+      toast.success("Case created successfully");
+      setIsCreateDialogOpen(false);
+      setFormData({
+        caseNumber: "",
+        subject: "",
+        accountId: "",
+        description: "",
+        priority: "Medium",
+        type: "Technical Issue",
+        status: "Open",
+      });
+    },
+    onError: (error) => {
+      toast.error(`Failed to create case: ${error.message}`);
+    },
+  });
+
+  const handleCreateCase = () => {
+    if (!formData.caseNumber.trim()) {
+      toast.error("Case number is required");
+      return;
+    }
+    if (!formData.subject.trim()) {
+      toast.error("Subject is required");
+      return;
+    }
+    if (!formData.accountId) {
+      toast.error("Account is required");
+      return;
+    }
+    if (!user?.id) {
+      toast.error("User not authenticated");
+      return;
+    }
+
+    createMutation.mutate({
+      caseNumber: formData.caseNumber,
+      subject: formData.subject,
+      accountId: parseInt(formData.accountId),
+      description: formData.description || undefined,
+      priority: formData.priority,
+      type: formData.type,
+      status: formData.status,
+      ownerId: user.id,
+    });
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -74,6 +159,10 @@ export default function Cases() {
             <h2 className="text-2xl font-bold text-foreground">Support Cases</h2>
             <p className="text-muted-foreground">Manage customer support tickets and issues</p>
           </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Case
+          </Button>
         </div>
 
         {isLoading ? (
@@ -120,6 +209,154 @@ export default function Cases() {
             </CardContent>
           </Card>
         )}
+
+        {/* Create Case Dialog */}
+        <Dialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          key={isCreateDialogOpen ? "open" : "closed"}
+        >
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Create New Support Case</DialogTitle>
+              <DialogDescription>
+                Create a new support ticket for a customer issue or request
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="caseNumber">Case Number *</Label>
+                  <Input
+                    id="caseNumber"
+                    value={formData.caseNumber}
+                    onChange={(e) => setFormData({ ...formData, caseNumber: e.target.value })}
+                    placeholder="e.g., CASE-001"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="account">Account *</Label>
+                  <Select
+                    value={formData.accountId}
+                    onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts?.map((account) => (
+                        <SelectItem key={account.id} value={account.id.toString()}>
+                          {account.accountName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject *</Label>
+                <Input
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  placeholder="Brief description of the issue"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Priority</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value: typeof formData.priority) =>
+                      setFormData({ ...formData, priority: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Low">Low</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="Critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: typeof formData.type) =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Technical Issue">Technical Issue</SelectItem>
+                      <SelectItem value="Feature Request">Feature Request</SelectItem>
+                      <SelectItem value="Question">Question</SelectItem>
+                      <SelectItem value="Bug Report">Bug Report</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value: typeof formData.status) =>
+                      setFormData({ ...formData, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Open">Open</SelectItem>
+                      <SelectItem value="In Progress">In Progress</SelectItem>
+                      <SelectItem value="Waiting on Customer">Waiting on Customer</SelectItem>
+                      <SelectItem value="Resolved">Resolved</SelectItem>
+                      <SelectItem value="Closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detailed description of the issue or request..."
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateCase}
+                disabled={createMutation.isPending}
+              >
+                Create Case
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
