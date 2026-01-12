@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { getDb } from "./db";
-import { leads } from "../drizzle/schema";
+import { leads, emailConnections } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 export const appRouter = router({
@@ -772,13 +772,64 @@ export const appRouter = router({
         const connection = await db.getEmailConnectionById(input.connectionId);
         if (!connection || connection.userId !== ctx.user.id) {
           throw new Error("Connection not found or unauthorized");
-        }
-
+         }
         return await db.deleteEmailConnection(input.connectionId);
       }),
   }),
 
-});
+  // Manual webhook renewal endpoint (for testing and manual triggers)
+  webhookRenewal: router({
+    renewAll: protectedProcedure.mutation(async () => {
+      const { renewAllWebhooks } = await import('./webhookRenewal');
+      const results = await renewAllWebhooks();
+      
+      return {
+        success: true,
+        results: {
+          gmail: {
+            success: results.gmail.success,
+            failed: results.gmail.failed,
+            errors: results.gmail.errors,
+          },
+          outlook: {
+            success: results.outlook.success,
+            failed: results.outlook.failed,
+            errors: results.outlook.errors,
+          },
+        },
+      };
+    }),
+    
+    getStatus: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return { connections: [] };
+      }
+      
+      const connections = await db
+        .select({
+          id: emailConnections.id,
+          provider: emailConnections.provider,
+          email: emailConnections.email,
+          webhookExpiry: emailConnections.webhookExpiry,
+          lastSyncAt: emailConnections.lastSyncAt,
+          isActive: emailConnections.isActive,
+        })
+        .from(emailConnections)
+        .where(eq(emailConnections.isActive, 1));
+      
+      return {
+        connections: connections.map(conn => ({
+          ...conn,
+          needsRenewal: conn.webhookExpiry ? new Date(conn.webhookExpiry) < new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) : true,
+          daysUntilExpiry: conn.webhookExpiry 
+            ? Math.ceil((new Date(conn.webhookExpiry).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+            : null,
+        })),
+      };
+    }),
+   }),
 
+});
 
 export type AppRouter = typeof appRouter;

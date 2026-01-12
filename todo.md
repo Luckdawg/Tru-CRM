@@ -232,3 +232,27 @@
 - [x] Add screenshots for client secret creation
 - [x] Include environment variable configuration instructions
 - [x] Add troubleshooting section
+
+
+## Scheduled Webhook Renewal - New Tasks
+
+### Gmail Watch Renewal
+- [x] Implement Gmail watch renewal function using googleapis
+- [x] Add logic to check watch expiration dates
+- [x] Create scheduled job to renew watches 1 day before expiration
+- [x] Handle renewal failures and retry logic
+- [x] Log renewal activity for monitoring
+
+### Outlook Subscription Renewal
+- [x] Implement Outlook webhook subscription renewal using Microsoft Graph
+- [x] Add logic to check subscription expiration dates
+- [x] Create scheduled job to renew subscriptions 1 day before expiration
+- [x] Handle renewal failures and retry logic
+- [x] Log renewal activity for monitoring
+
+### Job Scheduler
+- [x] Install and configure node-cron for scheduled tasks
+- [x] Create job runner that executes daily
+- [x] Add monitoring and alerting for failed renewals
+- [x] Implement graceful shutdown handling
+- [x] Add manual renewal endpoint for testing
