@@ -270,6 +270,7 @@
 - [x] Add URL filtering support when navigating from dashboard metrics
 - [x] Add edit and delete functionality to opportunity detail page
 - [ ] Create Reports page with bar charts and graphs for opportunities, close dates, and dashboard data
+- [x] Add Create Project button and form to Projects page
 
 
 ## New Features - Phase 3

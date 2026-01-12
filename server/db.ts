@@ -476,7 +476,9 @@ export async function createProject(project: InsertProject) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  return await db.insert(projects).values(project);
+  const result = await db.insert(projects).values(project);
+  const insertId = Number(result[0].insertId);
+  return await getProjectById(insertId);
 }
 
 export async function getProjectById(id: number) {

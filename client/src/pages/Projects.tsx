@@ -5,13 +5,76 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Plus, FolderKanban } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 export default function Projects() {
   const { user, isAuthenticated } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    projectName: "",
+    accountId: "",
+    status: "Planning" as const,
+    goLiveDate: "",
+  });
   
   const { data: projects, isLoading } = trpc.projects.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  const { data: accounts } = trpc.accounts.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const createMutation = trpc.projects.create.useMutation({
+    onSuccess: () => {
+      toast.success("Project created successfully");
+      setOpen(false);
+      setFormData({
+        projectName: "",
+        accountId: "",
+        status: "Planning",
+        goLiveDate: "",
+      });
+      trpc.useUtils().projects.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to create project: " + error.message);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.projectName || !formData.accountId) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    createMutation.mutate({
+      projectName: formData.projectName,
+      accountId: parseInt(formData.accountId),
+      status: formData.status,
+      goLiveDate: formData.goLiveDate ? new Date(formData.goLiveDate) : undefined,
+      ownerId: user!.id,
+    });
+  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -64,6 +127,89 @@ export default function Projects() {
             <h2 className="text-2xl font-bold text-foreground">Projects & Implementations</h2>
             <p className="text-muted-foreground">Track onboarding and implementation projects</p>
           </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Create New Project</DialogTitle>
+                  <DialogDescription>
+                    Add a new implementation project for customer onboarding
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="projectName">Project Name *</Label>
+                    <Input
+                      id="projectName"
+                      placeholder="e.g., Acme Corp Implementation"
+                      value={formData.projectName}
+                      onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accountId">Account *</Label>
+                    <Select
+                      value={formData.accountId}
+                      onValueChange={(value) => setFormData({ ...formData, accountId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {accounts?.map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            {account.accountName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Planning">Planning</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="On Hold">On Hold</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="goLiveDate">Target Go-Live Date</Label>
+                    <Input
+                      id="goLiveDate"
+                      type="date"
+                      value={formData.goLiveDate}
+                      onChange={(e) => setFormData({ ...formData, goLiveDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? "Creating..." : "Create Project"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {isLoading ? (
