@@ -173,7 +173,10 @@ export default function OpportunityDetail() {
                         min="0"
                         max="100"
                         value={formData.probability}
-                        onChange={(e) => setFormData({ ...formData, probability: parseInt(e.target.value) })}
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? 0 : parseInt(e.target.value);
+                          setFormData({ ...formData, probability: isNaN(value) ? 0 : value });
+                        }}
                       />
                     </div>
                   </div>

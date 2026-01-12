@@ -262,6 +262,7 @@
 
 - [x] Fix lead creation form - leadSource field using invalid enum values (needs to match database schema)
 - [x] Create lead detail page with edit functionality (clicking on lead shows blank screen)
+- [x] Fix OpportunityDetail page - React error #321 when trying to save changes
 
 
 ## New Features - Phase 3
