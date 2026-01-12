@@ -313,4 +313,8 @@
 - [ ] Resolve tRPC type generation issue - 'reports' router not recognized despite being defined
 - [ ] Fix all create form submissions across CRM (leads, accounts, contacts, opportunities) - blocked by build errors
 - [x] Fix opportunity creation validation errors - accountId optional, closeDate converted to Date
-- [ ] Resolve remaining TypeScript build errors preventing JavaScript execution (118 errors remaining)
+- [ ] Fix tRPC router configuration - 'useContext collision' error blocking all tRPC functionality
+- [ ] Resolve 115+ TypeScript errors preventing JavaScript execution
+- [x] Create Opportunity dialog opens successfully
+- [x] Opportunity validation fixes applied (accountId optional, closeDate Date conversion)
+- [ ] Form submissions blocked by tRPC type generation failure

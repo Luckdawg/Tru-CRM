@@ -43,7 +43,7 @@ function Router() {
       <Route path={"/projects/:id"} component={ProjectDetail} />
       <Route path={"/cases"} component={Cases} />
       <Route path={"/cases/:id"} component={CaseDetail} />
-      {/* <Route path={"/reports"} component={Reports} /> */}
+          {/* <Route path="/reports" component={Reports} /> */}
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

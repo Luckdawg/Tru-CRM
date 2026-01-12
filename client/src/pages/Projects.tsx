@@ -56,7 +56,7 @@ export default function Projects() {
       });
       trpc.useUtils().projects.list.invalidate();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("Failed to create project: " + error.message);
     },
   });
@@ -163,7 +163,7 @@ export default function Projects() {
                         <SelectValue placeholder="Select account" />
                       </SelectTrigger>
                       <SelectContent>
-                        {accounts?.map((account) => (
+                        {accounts?.map((account: any) => (
                           <SelectItem key={account.id} value={account.id.toString()}>
                             {account.accountName}
                           </SelectItem>
@@ -219,7 +219,7 @@ export default function Projects() {
           </div>
         ) : projects && projects.length > 0 ? (
           <div className="grid gap-4">
-            {projects.map((project) => (
+            {projects.map((project: any) => (
               <Link key={project.id} href={`/projects/${project.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardHeader>
