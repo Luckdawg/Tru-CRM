@@ -718,3 +718,67 @@ export async function getRecentActivities(userId: number, limit = 50) {
     .orderBy(desc(activities.activityDate))
     .limit(limit);
 }
+
+// ============ REPORTS FUNCTIONS ============
+
+export async function getOpportunitiesByCloseDate() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Group opportunities by month of close date
+  return await db.select({
+    month: sql<string>`DATE_FORMAT(${opportunities.closeDate}, '%Y-%m')`.as('month'),
+    count: sql<number>`count(*)`,
+    totalValue: sql<number>`sum(${opportunities.amount})`,
+  })
+  .from(opportunities)
+  .where(
+    sql`${opportunities.stage} NOT IN ('Closed Won', 'Closed Lost')`
+  )
+  .groupBy(sql`month`)
+  .orderBy(sql`month`);
+}
+
+export async function getRevenueByMonth() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get closed won opportunities grouped by month
+  return await db.select({
+    month: sql<string>`DATE_FORMAT(${opportunities.closedAt}, '%Y-%m')`.as('month'),
+    revenue: sql<number>`sum(${opportunities.amount})`,
+    count: sql<number>`count(*)`,
+  })
+  .from(opportunities)
+  .where(eq(opportunities.stage, 'Closed Won'))
+  .groupBy(sql`month`)
+  .orderBy(sql`month`);
+}
+
+export async function getOpportunitiesByType() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select({
+    type: opportunities.type,
+    count: sql<number>`count(*)`,
+    totalValue: sql<number>`sum(${opportunities.amount})`,
+  })
+  .from(opportunities)
+  .where(
+    sql`${opportunities.stage} NOT IN ('Closed Won', 'Closed Lost')`
+  )
+  .groupBy(opportunities.type);
+}
+
+export async function getLeadsBySource() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select({
+    source: leads.leadSource,
+    count: sql<number>`count(*)`,
+  })
+  .from(leads)
+  .groupBy(leads.leadSource);
+}

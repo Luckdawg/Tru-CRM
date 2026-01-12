@@ -674,6 +674,24 @@ export const appRouter = router({
     }),
   }),
 
+  reports: router({
+    opportunitiesByCloseDate: protectedProcedure.query(async () => {
+      return await db.getOpportunitiesByCloseDate();
+    }),
+    
+    revenueByMonth: protectedProcedure.query(async () => {
+      return await db.getRevenueByMonth();
+    }),
+    
+    opportunitiesByType: protectedProcedure.query(async () => {
+      return await db.getOpportunitiesByType();
+    }),
+    
+    leadsBySource: protectedProcedure.query(async () => {
+      return await db.getLeadsBySource();
+    }),
+  }),
+
   // Lead scoring automation
   leadScoring: router({
     calculateScore: publicProcedure
