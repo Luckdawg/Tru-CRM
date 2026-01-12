@@ -13,7 +13,8 @@ import Leads from "./pages/Leads";
 import LeadDetail from "./pages/LeadDetail";
 import Opportunities from "@/pages/Opportunities";
 import Pipeline from "@/pages/Pipeline";
-import Analytics from "@/pages/Analytics";
+import Analytics from "./pages/Analytics";
+import EmailSettings from "./pages/EmailSettings";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/opportunities/:id" component={OpportunityDetail} />
       <Route path="/pipeline" component={Pipeline} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/email-settings" component={EmailSettings} />
       <Route path={"/projects"} component={Projects} />
       <Route path={"/projects/:id"} component={ProjectDetail} />
       <Route path={"/cases"} component={Cases} />

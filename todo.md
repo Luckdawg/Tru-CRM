@@ -147,3 +147,38 @@
 - [ ] Write tests for lead scoring automation
 - [ ] Write tests for pipeline analytics
 - [ ] Verify all CRUD operations work correctly
+
+
+## Email Integration - New Feature
+
+### Backend Infrastructure
+- [x] Add email provider configuration table (Gmail, Outlook)
+- [ ] Implement OAuth flow for Gmail API
+- [ ] Implement OAuth flow for Microsoft Graph API
+- [x] Create email sync service for fetching messages
+- [x] Create calendar sync service for events
+- [ ] Add webhook handlers for real-time email notifications
+- [x] Store email credentials securely in database
+
+### Activity Logging
+- [x] Extend activities table to support email type
+- [x] Add email metadata fields (messageId, threadId, provider)
+- [x] Create procedure to match emails to CRM records (by email address)
+- [x] Implement automatic activity creation from emails
+- [x] Add calendar event to activity conversion
+- [x] Build email thread tracking
+
+### Frontend UI
+- [x] Create email provider connection page
+- [ ] Build OAuth consent flow UI
+- [x] Add activity timeline component with email display
+- [x] Show email preview in activity cards
+- [ ] Add manual email compose and send feature
+- [x] Display calendar events in activity timeline
+- [ ] Add filters for activity types (email, call, meeting)
+
+### Testing
+- [x] Write tests for email sync procedures
+- [ ] Test OAuth flows
+- [x] Test activity matching logic
+- [x] Test calendar event sync

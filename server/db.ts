@@ -12,6 +12,7 @@ import {
   cases,
   products,
   lineItems,
+  emailConnections,
   InsertAccount,
   InsertContact,
   InsertLead,
@@ -20,7 +21,8 @@ import {
   InsertProject,
   InsertCase,
   InsertProduct,
-  InsertLineItem
+  InsertLineItem,
+  InsertEmailConnection
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -594,4 +596,60 @@ export async function getLostOpportunities() {
   return await db.select().from(opportunities)
     .where(eq(opportunities.stage, 'Closed Lost'))
     .orderBy(desc(opportunities.closedAt));
+}
+
+
+// ============ EMAIL CONNECTION FUNCTIONS ============
+
+export async function createEmailConnection(connection: InsertEmailConnection) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(emailConnections).values(connection);
+  const insertId = Number(result[0].insertId);
+  return await getEmailConnectionById(insertId);
+}
+
+export async function getEmailConnectionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(emailConnections).where(eq(emailConnections.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function getEmailConnectionsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(emailConnections)
+    .where(and(eq(emailConnections.userId, userId), eq(emailConnections.isActive, 1)));
+}
+
+export async function updateEmailConnection(id: number, data: Partial<InsertEmailConnection>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(emailConnections).set({ ...data, updatedAt: new Date() }).where(eq(emailConnections.id, id));
+  return await getEmailConnectionById(id);
+}
+
+export async function deleteEmailConnection(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(emailConnections).set({ isActive: 0 }).where(eq(emailConnections.id, id));
+  return true;
+}
+
+// ============ ACTIVITY FUNCTIONS (Extended) ============
+
+export async function getRecentActivities(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(activities)
+    .where(eq(activities.ownerId, userId))
+    .orderBy(desc(activities.activityDate))
+    .limit(limit);
 }

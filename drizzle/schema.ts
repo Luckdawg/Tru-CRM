@@ -290,11 +290,22 @@ export const activities = mysqlTable("activities", {
   notes: text("notes"),
   outcome: text("outcome"),
   ownerId: int("ownerId").notNull(), // user who logged the activity
+  // Email integration fields
+  emailMessageId: varchar("emailMessageId", { length: 255 }), // provider's message ID
+  emailThreadId: varchar("emailThreadId", { length: 255 }), // provider's thread ID
+  emailProvider: mysqlEnum("emailProvider", ["Gmail", "Outlook"]),
+  emailFrom: varchar("emailFrom", { length: 320 }), // sender email
+  emailTo: text("emailTo"), // JSON array of recipients
+  emailBody: text("emailBody"), // email content
+  emailHtml: text("emailHtml"), // HTML version
+  emailAttachments: text("emailAttachments"), // JSON array of attachment metadata
+  isInbound: int("isInbound").default(0), // 0=outbound, 1=inbound
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   relatedIdx: index("related_idx").on(table.relatedToType, table.relatedToId),
   ownerIdx: index("owner_idx").on(table.ownerId),
+  emailMessageIdx: index("email_message_idx").on(table.emailMessageId),
 }));
 
 export type Activity = typeof activities.$inferSelect;
@@ -387,3 +398,27 @@ export const cases = mysqlTable("cases", {
 
 export type Case = typeof cases.$inferSelect;
 export type InsertCase = typeof cases.$inferInsert;
+
+/**
+ * Email Provider Connections - OAuth tokens for email sync
+ */
+export const emailConnections = mysqlTable("emailConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: mysqlEnum("provider", ["Gmail", "Outlook"]).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken"),
+  tokenExpiry: timestamp("tokenExpiry"),
+  scope: text("scope"), // granted permissions
+  isActive: int("isActive").default(1).notNull(),
+  lastSyncAt: timestamp("lastSyncAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdx: index("user_idx").on(table.userId),
+  emailIdx: index("email_idx").on(table.email),
+}));
+
+export type EmailConnection = typeof emailConnections.$inferSelect;
+export type InsertEmailConnection = typeof emailConnections.$inferInsert;

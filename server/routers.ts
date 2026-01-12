@@ -680,6 +680,105 @@ export const appRouter = router({
         return { scored };
       }),
   }),
+
+  // Email integration
+  email: router({
+    // Get user's email connections
+    connections: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getEmailConnectionsByUser(ctx.user.id);
+    }),
+
+    // Sync emails from connected provider
+    syncEmails: protectedProcedure
+      .input(z.object({ connectionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const connection = await db.getEmailConnectionById(input.connectionId);
+        if (!connection || connection.userId !== ctx.user.id) {
+          throw new Error("Connection not found or unauthorized");
+        }
+
+        const { GmailSync, OutlookSync, createActivityFromEmail } = await import('./emailSync');
+        
+        let emails: any[] = [];
+        let createdCount = 0;
+
+        if (connection.provider === "Gmail") {
+          const sync = new GmailSync(connection.accessToken, connection.refreshToken || undefined);
+          emails = await sync.fetchEmails(50);
+        } else if (connection.provider === "Outlook") {
+          const sync = new OutlookSync(connection.accessToken);
+          emails = await sync.fetchEmails(50);
+        }
+
+        // Create activities from emails
+        for (const email of emails) {
+          const isInbound = !email.labelIds?.includes('SENT'); // Gmail specific
+          const activityId = await createActivityFromEmail(
+            email,
+            connection.provider,
+            ctx.user.id,
+            isInbound
+          );
+          if (activityId) createdCount++;
+        }
+
+        // Update last sync time
+        await db.updateEmailConnection(connection.id, {
+          lastSyncAt: new Date(),
+        });
+
+        return { synced: emails.length, created: createdCount };
+      }),
+
+    // Sync calendar events
+    syncCalendar: protectedProcedure
+      .input(z.object({ connectionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const connection = await db.getEmailConnectionById(input.connectionId);
+        if (!connection || connection.userId !== ctx.user.id) {
+          throw new Error("Connection not found or unauthorized");
+        }
+
+        const { GmailSync, OutlookSync, createActivityFromCalendarEvent } = await import('./emailSync');
+        
+        let events: any[] = [];
+        let createdCount = 0;
+
+        if (connection.provider === "Gmail") {
+          const sync = new GmailSync(connection.accessToken, connection.refreshToken || undefined);
+          events = await sync.fetchCalendarEvents(50);
+        } else if (connection.provider === "Outlook") {
+          const sync = new OutlookSync(connection.accessToken);
+          events = await sync.fetchCalendarEvents(50);
+        }
+
+        // Create activities from calendar events
+        for (const event of events) {
+          const activityId = await createActivityFromCalendarEvent(
+            event,
+            connection.provider,
+            ctx.user.id
+          );
+          if (activityId) createdCount++;
+        }
+
+        return { synced: events.length, created: createdCount };
+      }),
+
+    // Delete email connection
+    deleteConnection: protectedProcedure
+      .input(z.object({ connectionId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const connection = await db.getEmailConnectionById(input.connectionId);
+        if (!connection || connection.userId !== ctx.user.id) {
+          throw new Error("Connection not found or unauthorized");
+        }
+
+        return await db.deleteEmailConnection(input.connectionId);
+      }),
+  }),
+
 });
+
 
 export type AppRouter = typeof appRouter;
