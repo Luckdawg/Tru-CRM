@@ -14,10 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Save, TrendingUp } from "lucide-react";
+import { ArrowLeft, Save, TrendingUp, Trash2, Edit } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type OpportunityStage = "Discovery" | "Solution Fit" | "PoC/Trial" | "Security Review" | "Procurement" | "Verbal Commit" | "Closed Won" | "Closed Lost";
 
@@ -31,15 +42,33 @@ export default function OpportunityDetail() {
     { enabled: isAuthenticated && oppId > 0 }
   );
 
+  const [, setLocation] = useLocation();
+  const [isEditing, setIsEditing] = useState(false);
+
   const updateMutation = trpc.opportunities.update.useMutation({
     onSuccess: () => {
       toast.success("Opportunity updated successfully");
+      setIsEditing(false);
       trpc.useUtils().opportunities.get.invalidate({ id: oppId });
     },
     onError: (error) => {
       toast.error("Failed to update: " + error.message);
     },
   });
+
+  const deleteMutation = trpc.opportunities.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Opportunity deleted successfully");
+      setLocation("/opportunities");
+    },
+    onError: (error) => {
+      toast.error("Failed to delete: " + error.message);
+    },
+  });
+
+  const handleDelete = () => {
+    deleteMutation.mutate({ id: oppId });
+  };
 
   const [formData, setFormData] = useState<{
     stage: OpportunityStage;
@@ -128,6 +157,35 @@ export default function OpportunityDetail() {
           </div>
           <div className="flex items-center gap-4">
             <Badge>{opportunity.stage}</Badge>
+            {!isEditing && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the opportunity "{opportunity.opportunityName}".
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <span className="text-sm text-muted-foreground">Welcome, {user?.name}</span>
           </div>
         </div>
@@ -149,6 +207,7 @@ export default function OpportunityDetail() {
                       <Select
                         value={formData.stage}
                         onValueChange={(value) => setFormData({ ...formData, stage: value as OpportunityStage })}
+                        disabled={!isEditing}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -177,6 +236,7 @@ export default function OpportunityDetail() {
                           const value = e.target.value === "" ? 0 : parseInt(e.target.value);
                           setFormData({ ...formData, probability: isNaN(value) ? 0 : value });
                         }}
+                        disabled={!isEditing}
                       />
                     </div>
                   </div>
@@ -197,6 +257,7 @@ export default function OpportunityDetail() {
                       value={formData.metrics}
                       onChange={(e) => setFormData({ ...formData, metrics: e.target.value })}
                       rows={3}
+                      disabled={!isEditing}
                     />
                   </div>
 
@@ -210,6 +271,7 @@ export default function OpportunityDetail() {
                       value={formData.decisionCriteria}
                       onChange={(e) => setFormData({ ...formData, decisionCriteria: e.target.value })}
                       rows={3}
+                      disabled={!isEditing}
                     />
                   </div>
 
@@ -223,6 +285,7 @@ export default function OpportunityDetail() {
                       value={formData.decisionProcess}
                       onChange={(e) => setFormData({ ...formData, decisionProcess: e.target.value })}
                       rows={3}
+                      disabled={!isEditing}
                     />
                   </div>
 
@@ -236,6 +299,7 @@ export default function OpportunityDetail() {
                       value={formData.identifiedPain}
                       onChange={(e) => setFormData({ ...formData, identifiedPain: e.target.value })}
                       rows={3}
+                      disabled={!isEditing}
                     />
                   </div>
                 </CardContent>
@@ -252,6 +316,7 @@ export default function OpportunityDetail() {
                     value={formData.nextSteps}
                     onChange={(e) => setFormData({ ...formData, nextSteps: e.target.value })}
                     rows={4}
+                    disabled={!isEditing}
                   />
                 </CardContent>
               </Card>
@@ -284,10 +349,36 @@ export default function OpportunityDetail() {
                 </CardContent>
               </Card>
 
-              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? "Saving..." : "Save Changes"}
-              </Button>
+              {isEditing && (
+                <>
+                  <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => {
+                      setIsEditing(false);
+                      // Reset form data to original values
+                      if (opportunity) {
+                        setFormData({
+                          stage: opportunity.stage as OpportunityStage,
+                          probability: opportunity.probability || 0,
+                          metrics: opportunity.metrics || "",
+                          decisionCriteria: opportunity.decisionCriteria || "",
+                          decisionProcess: opportunity.decisionProcess || "",
+                          identifiedPain: opportunity.identifiedPain || "",
+                          nextSteps: opportunity.nextSteps || "",
+                        });
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </form>

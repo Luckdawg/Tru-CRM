@@ -268,6 +268,8 @@
 - [x] Calculate Win Rate metric from closed opportunities
 - [x] Calculate Average Deal Size metric from current quarter data
 - [x] Add URL filtering support when navigating from dashboard metrics
+- [x] Add edit and delete functionality to opportunity detail page
+- [ ] Create Reports page with bar charts and graphs for opportunities, close dates, and dashboard data
 
 
 ## New Features - Phase 3
