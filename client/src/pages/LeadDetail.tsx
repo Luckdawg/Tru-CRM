@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, TrendingUp } from "lucide-react";
 
 export default function LeadDetail() {
   const [, params] = useRoute("/leads/:id");
@@ -29,6 +29,16 @@ export default function LeadDetail() {
     },
     onError: (error) => {
       toast.error(`Failed to update lead: ${error.message}`);
+    },
+  });
+
+  const convertLead = trpc.leads.convertToOpportunity.useMutation({
+    onSuccess: (data) => {
+      toast.success("Lead converted successfully");
+      setLocation(`/opportunities/${data.opportunityId}`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to convert lead: ${error.message}`);
     },
   });
 
@@ -298,15 +308,33 @@ export default function LeadDetail() {
               </div>
 
               <div className="flex justify-between">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleteLead.isPending}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Lead
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deleteLead.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Lead
+                  </Button>
+
+                  {formData.status !== "Converted" && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        if (confirm("Convert this lead to an opportunity? This will create an account, contact, and opportunity.")) {
+                          convertLead.mutate({ leadId: leadId! });
+                        }
+                      }}
+                      disabled={convertLead.isPending}
+                    >
+                      <TrendingUp className="mr-2 h-4 w-4" />
+                      {convertLead.isPending ? "Converting..." : "Convert to Opportunity"}
+                    </Button>
+                  )}
+                </div>
 
                 <Button type="submit" disabled={updateLead.isPending}>
                   <Save className="mr-2 h-4 w-4" />

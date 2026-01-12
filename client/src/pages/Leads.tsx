@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Plus, Search, UserPlus, Mail, Phone } from "lucide-react";
+import CSVImportExport from "@/components/CSVImportExport";
 import { useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -142,6 +143,8 @@ export default function Leads() {
 
       {/* Main Content */}
       <main className="container py-8">
+        <CSVImportExport type="leads" />
+        <div className="h-6"></div>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-foreground">Leads</h2>

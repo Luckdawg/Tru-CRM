@@ -262,3 +262,31 @@
 
 - [x] Fix lead creation form - leadSource field using invalid enum values (needs to match database schema)
 - [x] Create lead detail page with edit functionality (clicking on lead shows blank screen)
+
+
+## New Features - Phase 3
+
+### Detail Pages
+- [x] Create Account detail page with edit form
+- [x] Create Contact detail page with edit form
+- [x] Create Opportunity detail page with edit form (already exists)
+- [x] Add proper routing for all detail pages
+
+### Lead Conversion Workflow
+- [x] Add "Convert to Opportunity" button on lead detail page
+- [x] Implement backend conversion procedure
+- [x] Create account from lead company
+- [x] Create contact from lead information
+- [x] Create opportunity linked to account
+- [x] Update lead status to "Converted"
+- [ ] Show success message with links to new records
+
+### CSV Import/Export
+- [ ] Add CSV export button to Leads list page
+- [ ] Add CSV export button to Contacts list page
+- [ ] Implement CSV generation for leads
+- [ ] Implement CSV generation for contacts
+- [ ] Add CSV import button with file upload
+- [ ] Implement CSV parsing and validation
+- [ ] Handle duplicate detection during import
+- [ ] Show import summary (success/errors)

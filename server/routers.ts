@@ -277,6 +277,72 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await db.searchLeads(input.searchTerm);
       }),
+
+    convertToOpportunity: protectedProcedure
+      .input(z.object({ leadId: z.number() }))
+      .mutation(async ({ input }) => {
+        const lead = await db.getLeadById(input.leadId);
+        if (!lead) {
+          throw new Error("Lead not found");
+        }
+
+        // Create or find account
+        let accountId: number;
+        const existingAccounts = await db.getAllAccounts();
+        const existingAccount = existingAccounts.find(
+          (a: any) => a.accountName?.toLowerCase() === lead.company?.toLowerCase()
+        );
+
+        if (existingAccount) {
+          accountId = existingAccount.id;
+        } else {
+          const newAccount = await db.createAccount({
+            accountName: lead.company || "Unknown Company",
+            ownerId: 1, // Default owner
+          });
+          accountId = newAccount?.id || 0;
+        }
+
+        // Create contact
+        await db.createContact({
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          email: lead.email,
+          phone: lead.phone || undefined,
+          accountId,
+        });
+
+        // Get the newly created contact ID
+        const contacts = await db.getContactsByAccount(accountId);
+        const contact = contacts[contacts.length - 1];
+
+        // Create opportunity
+        const closeDate = new Date();
+        closeDate.setMonth(closeDate.getMonth() + 3); // 3 months from now
+        
+        await db.createOpportunity({
+          opportunityName: `${lead.company} - ${lead.firstName} ${lead.lastName}`,
+          accountId,
+          stage: "Discovery",
+          amount: "0",
+          closeDate,
+          ownerId: 1, // Default owner
+        });
+
+        // Get the newly created opportunity ID
+        const opportunities = await db.getOpportunitiesByAccount(accountId);
+        const opportunity = opportunities[opportunities.length - 1];
+
+        // Update lead status to Converted
+        await db.updateLead(input.leadId, { status: "Converted" });
+
+        return {
+          success: true,
+          accountId,
+          contactId: contact?.id || 0,
+          opportunityId: opportunity?.id || 0,
+        };
+      }),
   }),
 
   products: router({
@@ -831,5 +897,3 @@ export const appRouter = router({
    }),
 
 });
-
-export type AppRouter = typeof appRouter;
