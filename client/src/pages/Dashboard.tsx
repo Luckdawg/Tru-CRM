@@ -11,6 +11,15 @@ export default function Dashboard() {
   const { data: pipelineData } = trpc.dashboard.pipelineByStage.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const { data: activeAccountsCount } = trpc.dashboard.activeAccountsCount.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: winRate } = trpc.dashboard.winRate.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: avgDealSize } = trpc.dashboard.averageDealSize.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   if (loading) {
     return (
@@ -100,7 +109,7 @@ export default function Dashboard() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Link href="/opportunities">
+          <Link href="/opportunities?filter=open">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Pipeline</CardTitle>
@@ -124,7 +133,7 @@ export default function Dashboard() {
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{activeAccountsCount ?? '--'}</div>
                 <p className="text-xs text-muted-foreground mt-1">Across all regions</p>
               </CardContent>
             </Card>
@@ -137,7 +146,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{winRate !== null ? `${winRate}%` : '--'}</div>
                 <p className="text-xs text-muted-foreground mt-1">Last 90 days</p>
               </CardContent>
             </Card>
@@ -150,7 +159,7 @@ export default function Dashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">--</div>
+                <div className="text-2xl font-bold">{avgDealSize !== null ? `$${Math.round(avgDealSize).toLocaleString()}` : '--'}</div>
                 <p className="text-xs text-muted-foreground mt-1">This quarter</p>
               </CardContent>
             </Card>

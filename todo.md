@@ -264,6 +264,10 @@
 - [x] Create lead detail page with edit functionality (clicking on lead shows blank screen)
 - [x] Fix OpportunityDetail page - React error #321 when trying to save changes
 - [x] Make Sales Dashboard metrics clickable to navigate to underlying detail pages
+- [x] Populate Active Accounts metric with real data from database
+- [x] Calculate Win Rate metric from closed opportunities
+- [x] Calculate Average Deal Size metric from current quarter data
+- [x] Add URL filtering support when navigating from dashboard metrics
 
 
 ## New Features - Phase 3

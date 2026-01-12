@@ -655,8 +655,22 @@ export const appRouter = router({
       return await db.getWonOpportunities();
     }),
     
-      lostOpportunities: protectedProcedure.query(async () => {
+    lostOpportunities: protectedProcedure.query(async () => {
       return await db.getLostOpportunities();
+    }),
+    
+    activeAccountsCount: protectedProcedure.query(async () => {
+      return await db.getActiveAccountsCount();
+    }),
+    
+    winRate: protectedProcedure
+      .input(z.object({ days: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getWinRate(input?.days || 90);
+      }),
+    
+    averageDealSize: protectedProcedure.query(async () => {
+      return await db.getAverageDealSize();
     }),
   }),
 

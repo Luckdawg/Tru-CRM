@@ -4,13 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Plus, Search, TrendingUp, DollarSign } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 
 export default function Opportunities() {
   const { user, isAuthenticated } = useAuth();
+  const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
+  
+  // Check for filter parameter in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const filterParam = params.get('filter');
+    if (filterParam === 'open') {
+      setStageFilter('all');
+    }
+  }, [location]);
   
   const { data: opportunities, isLoading } = trpc.opportunities.list.useQuery(undefined, {
     enabled: isAuthenticated,

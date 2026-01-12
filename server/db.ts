@@ -598,6 +598,69 @@ export async function getLostOpportunities() {
     .orderBy(desc(opportunities.closedAt));
 }
 
+export async function getActiveAccountsCount() {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db.select({
+    count: sql<number>`count(*)`
+  })
+  .from(accounts);
+  
+  return result[0]?.count || 0;
+}
+
+export async function getWinRate(days: number = 90) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  
+  const result = await db.select({
+    totalClosed: sql<number>`count(*)`,
+    totalWon: sql<number>`sum(case when ${opportunities.stage} = 'Closed Won' then 1 else 0 end)`
+  })
+  .from(opportunities)
+  .where(
+    and(
+      sql`${opportunities.stage} IN ('Closed Won', 'Closed Lost')`,
+      sql`${opportunities.closedAt} >= ${cutoffDate}`
+    )
+  );
+  
+  const totalClosed = result[0]?.totalClosed || 0;
+  const totalWon = result[0]?.totalWon || 0;
+  
+  if (totalClosed === 0) return null;
+  
+  return Math.round((totalWon / totalClosed) * 100);
+}
+
+export async function getAverageDealSize() {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Get current quarter start date
+  const now = new Date();
+  const currentQuarter = Math.floor(now.getMonth() / 3);
+  const quarterStartMonth = currentQuarter * 3;
+  const quarterStart = new Date(now.getFullYear(), quarterStartMonth, 1);
+  
+  const result = await db.select({
+    avgAmount: sql<number>`avg(${opportunities.amount})`
+  })
+  .from(opportunities)
+  .where(
+    and(
+      eq(opportunities.stage, 'Closed Won'),
+      sql`${opportunities.closedAt} >= ${quarterStart}`
+    )
+  );
+  
+  return result[0]?.avgAmount || null;
+}
+
 
 // ============ EMAIL CONNECTION FUNCTIONS ============
 
