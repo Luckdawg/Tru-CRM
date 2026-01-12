@@ -1,0 +1,9 @@
+{
+  "query": "SELECT * FROM contacts WHERE email LIKE '%Brandiss.Boaz%' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2KQuguC66uRWakj.32b799088a2a --database 7utqUhddvmABzwazcp5nEc --execute SELECT * FROM contacts WHERE email LIKE '%Brandiss.Boaz%' LIMIT 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 434
+}

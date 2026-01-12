@@ -4,6 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { Plus, Search, TrendingUp, DollarSign } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -12,6 +17,54 @@ export default function Opportunities() {
   const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [oppName, setOppName] = useState("");
+  const [oppAmount, setOppAmount] = useState("");
+  const [oppStage, setOppStage] = useState("Discovery");
+  const [oppType, setOppType] = useState("New Business");
+  const [oppProbability, setOppProbability] = useState("10");
+  const [oppCloseDate, setOppCloseDate] = useState("");
+
+  
+  const utils = trpc.useUtils();
+  const createOpportunity = trpc.opportunities.create.useMutation({
+    onSuccess: () => {
+      toast.success("Opportunity created successfully");
+      utils.opportunities.list.invalidate();
+      setIsCreateDialogOpen(false);
+      // Reset form
+      setOppName("");
+      setOppAmount("");
+      setOppStage("Discovery");
+      setOppType("New Business");
+      setOppProbability("10");
+      setOppCloseDate("");
+    },
+    onError: (error) => {
+      toast.error(`Failed to create opportunity: ${error.message}`);
+    },
+  });
+  
+  const handleCreateOpportunity = () => {
+    console.log("=== handleCreateOpportunity called ===");
+    console.log("oppName:", oppName);
+    console.log("oppAmount:", oppAmount);
+    console.log("oppCloseDate:", oppCloseDate);
+    if (!oppName || !oppAmount || !oppCloseDate) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    createOpportunity.mutate({
+      opportunityName: oppName,
+      amount: oppAmount,
+      stage: oppStage,
+      type: oppType,
+      probability: parseInt(oppProbability) || 0,
+      closeDate: oppCloseDate,
+      accountId: null,
+      ownerId: user!.id,
+    });
+  };
   
   // Check for filter parameter in URL
   useEffect(() => {
@@ -86,12 +139,73 @@ export default function Opportunities() {
             <h2 className="text-2xl font-bold text-foreground">Sales Pipeline</h2>
             <p className="text-muted-foreground">Track and manage your sales opportunities</p>
           </div>
-          <Link href="/opportunities/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Opportunity
-            </Button>
-          </Link>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Opportunity
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Opportunity</DialogTitle>
+                <DialogDescription>Add a new sales opportunity to your pipeline</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-name">Opportunity Name *</Label>
+                  <Input id="opp-name" value={oppName} onChange={(e) => setOppName(e.target.value)} placeholder="Enterprise Deal Q1" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-amount">Amount *</Label>
+                  <Input id="opp-amount" type="number" value={oppAmount} onChange={(e) => setOppAmount(e.target.value)} placeholder="50000" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-stage">Stage</Label>
+                  <Select value={oppStage} onValueChange={setOppStage}>
+                    <SelectTrigger id="opp-stage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Discovery">Discovery</SelectItem>
+                      <SelectItem value="Solution Fit">Solution Fit</SelectItem>
+                      <SelectItem value="Proof of Concept">Proof of Concept</SelectItem>
+                      <SelectItem value="Proposal">Proposal</SelectItem>
+                      <SelectItem value="Negotiation">Negotiation</SelectItem>
+                      <SelectItem value="Closed Won">Closed Won</SelectItem>
+                      <SelectItem value="Closed Lost">Closed Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-type">Type</Label>
+                  <Select value={oppType} onValueChange={setOppType}>
+                    <SelectTrigger id="opp-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="New Business">New Business</SelectItem>
+                      <SelectItem value="Upsell">Upsell</SelectItem>
+                      <SelectItem value="Renewal">Renewal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-probability">Probability (%)</Label>
+                  <Input id="opp-probability" type="number" value={oppProbability} onChange={(e) => setOppProbability(e.target.value)} placeholder="10" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="opp-closedate">Expected Close Date *</Label>
+                  <Input id="opp-closedate" type="date" value={oppCloseDate} onChange={(e) => setOppCloseDate(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleCreateOpportunity} disabled={createOpportunity.isPending}>
+                  {createOpportunity.isPending ? "Creating..." : "Create Opportunity"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {isLoading ? (
@@ -146,12 +260,10 @@ export default function Opportunities() {
               <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No opportunities found</h3>
               <p className="text-muted-foreground mb-4">Get started by creating your first opportunity</p>
-              <Link href="/opportunities/new">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Opportunity
-                </Button>
-              </Link>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Opportunity
+              </Button>
             </CardContent>
           </Card>
         )}

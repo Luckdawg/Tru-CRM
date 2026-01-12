@@ -308,3 +308,7 @@
 - [x] Debug module loading error preventing form submissions from working - refactored to use onClick handlers
 - [x] Fix TypeScript errors in Reports.tsx (4 implicit 'any' type errors)
 - [x] Simplify form submission approach to avoid Dialog interference
+- [x] Fix Create Opportunity button on Opportunities page - dialog opens successfully
+- [ ] Fix opportunity creation submission - TypeScript build errors (121 errors) preventing JavaScript execution
+- [ ] Resolve tRPC type generation issue - 'reports' router not recognized despite being defined
+- [ ] Fix all create form submissions across CRM (leads, accounts, contacts, opportunities) - blocked by build errors
