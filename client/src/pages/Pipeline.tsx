@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { DollarSign, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -34,6 +34,21 @@ interface Opportunity {
   probability: number | null;
   closeDate: Date;
   type: string | null;
+}
+
+function DroppableStageColumn({ stage, children }: { stage: OpportunityStage; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage });
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`bg-muted/50 rounded-lg p-4 min-h-[500px] transition-colors ${
+        isOver ? "ring-2 ring-primary bg-primary/5" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
 }
 
 function SortableOpportunityCard({ opportunity }: { opportunity: Opportunity }) {
@@ -191,13 +206,12 @@ export default function Pipeline() {
                 const stageValue = stageOpps.reduce((sum, opp) => sum + parseFloat(opp.amount), 0);
                 
                 return (
-                  <SortableContext
-                    key={stage}
-                    id={stage}
-                    items={stageOpps.map(opp => opp.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="bg-muted/50 rounded-lg p-4 min-h-[500px]">
+                  <DroppableStageColumn key={stage} stage={stage}>
+                    <SortableContext
+                      id={`${stage}-sortable`}
+                      items={stageOpps.map(opp => opp.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                       <div className="mb-4">
                         <h3 className="font-semibold text-sm mb-1">{stage}</h3>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -211,8 +225,8 @@ export default function Pipeline() {
                           <SortableOpportunityCard key={opp.id} opportunity={opp} />
                         ))}
                       </div>
-                    </div>
-                  </SortableContext>
+                    </SortableContext>
+                  </DroppableStageColumn>
                 );
               })}
             </div>

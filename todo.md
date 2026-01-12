@@ -353,3 +353,11 @@
 - [x] Add Create Case button to Support Cases page
 - [x] Implement Create Case dialog with form fields (title, description, priority, status, account)
 - [x] Test case creation and verify data persistence
+
+
+## Bug Fix - Stage Validation Issues
+
+- [x] Fix stage dropdown options in Create Opportunity form (removed "Negotiation", "Proposal", added "PoC/Trial", "Security Review", "Procurement", "Verbal Commit")
+- [x] Fix stage enum mismatch between frontend and backend
+- [x] Test Create Opportunity form with corrected stages
+- [x] Test drag-and-drop across all pipeline stages (added useDroppable hooks)

@@ -169,9 +169,10 @@ export default function Opportunities() {
                     <SelectContent>
                       <SelectItem value="Discovery">Discovery</SelectItem>
                       <SelectItem value="Solution Fit">Solution Fit</SelectItem>
-                      <SelectItem value="Proof of Concept">Proof of Concept</SelectItem>
-                      <SelectItem value="Proposal">Proposal</SelectItem>
-                      <SelectItem value="Negotiation">Negotiation</SelectItem>
+                      <SelectItem value="PoC/Trial">PoC/Trial</SelectItem>
+                      <SelectItem value="Security Review">Security Review</SelectItem>
+                      <SelectItem value="Procurement">Procurement</SelectItem>
+                      <SelectItem value="Verbal Commit">Verbal Commit</SelectItem>
                       <SelectItem value="Closed Won">Closed Won</SelectItem>
                       <SelectItem value="Closed Lost">Closed Lost</SelectItem>
                     </SelectContent>
@@ -185,7 +186,7 @@ export default function Opportunities() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="New Business">New Business</SelectItem>
-                      <SelectItem value="Upsell">Upsell</SelectItem>
+                      <SelectItem value="Expansion">Expansion</SelectItem>
                       <SelectItem value="Renewal">Renewal</SelectItem>
                     </SelectContent>
                   </Select>
