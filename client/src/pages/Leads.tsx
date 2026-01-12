@@ -33,6 +33,9 @@ export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [leadSource, setLeadSource] = useState<string>("Website");
+  const [status, setStatus] = useState<string>("New");
+  const [segment, setSegment] = useState<string>("");
   
   const { data: leads, isLoading } = trpc.leads.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -42,6 +45,10 @@ export default function Leads() {
     onSuccess: () => {
       toast.success("Lead created successfully");
       setIsCreateOpen(false);
+      // Reset form state
+      setLeadSource("Website");
+      setStatus("New");
+      setSegment("");
       trpc.useUtils().leads.list.invalidate();
     },
     onError: (error) => {
@@ -51,21 +58,25 @@ export default function Leads() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Form submit triggered");
     const formData = new FormData(e.currentTarget);
     
-    createMutation.mutate({
+    const leadData = {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
       phone: formData.get("phone") as string || undefined,
       company: formData.get("company") as string || "Unknown",
       title: formData.get("title") as string || undefined,
-      leadSource: (formData.get("leadSource") as any) || "Website",
-      status: formData.get("status") as any || undefined,
-      segment: formData.get("segment") as any || undefined,
+      leadSource: leadSource as any,
+      status: status as any,
+      segment: segment && segment !== "" ? segment as any : undefined,
       notes: formData.get("notes") as string || undefined,
       assignedTo: user?.id || undefined,
-    });
+    };
+    
+    console.log("Creating lead with data:", leadData);
+    createMutation.mutate(leadData);
   };
 
   const filteredLeads = leads?.filter(lead => {
@@ -201,7 +212,7 @@ export default function Leads() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="leadSource">Source</Label>
-                      <Select name="leadSource">
+                      <Select name="leadSource" value={leadSource} onValueChange={setLeadSource}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select source" />
                         </SelectTrigger>
@@ -220,7 +231,7 @@ export default function Leads() {
                     
                     <div className="grid gap-2">
                       <Label htmlFor="status">Status</Label>
-                      <Select name="status" defaultValue="New">
+                      <Select name="status" value={status} onValueChange={setStatus}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -235,7 +246,7 @@ export default function Leads() {
                     
                     <div className="grid gap-2">
                       <Label htmlFor="segment">Segment</Label>
-                      <Select name="segment">
+                      <Select name="segment" value={segment} onValueChange={setSegment}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select segment" />
                         </SelectTrigger>
@@ -257,7 +268,15 @@ export default function Leads() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
+                  <Button type="button" onClick={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget.closest('form');
+                    if (form) {
+                      const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+                      form.dispatchEvent(formEvent);
+                      handleSubmit(formEvent as any);
+                    }
+                  }} disabled={createMutation.isPending}>
                     {createMutation.isPending ? "Creating..." : "Create Lead"}
                   </Button>
                 </DialogFooter>

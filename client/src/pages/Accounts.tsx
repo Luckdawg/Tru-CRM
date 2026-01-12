@@ -30,6 +30,9 @@ export default function Accounts() {
   const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [industry, setIndustry] = useState<string>("");
+  const [region, setRegion] = useState<string>("");
+  const [vertical, setVertical] = useState<string>("");
   
   const { data: accounts, isLoading } = trpc.accounts.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -39,6 +42,10 @@ export default function Accounts() {
     onSuccess: () => {
       toast.success("Account created successfully");
       setIsCreateOpen(false);
+      // Reset form state
+      setIndustry("");
+      setRegion("");
+      setVertical("");
       trpc.useUtils().accounts.list.invalidate();
     },
     onError: (error) => {
@@ -50,17 +57,28 @@ export default function Accounts() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    createMutation.mutate({
+    const sizeValue = formData.get("size") as string;
+    const parsedSize = sizeValue && sizeValue.trim() !== "" ? parseInt(sizeValue) : undefined;
+    
+    if (!user?.id) {
+      toast.error("User not authenticated");
+      return;
+    }
+    
+    const accountData = {
       accountName: formData.get("accountName") as string,
-      industry: formData.get("industry") as any,
-      size: formData.get("size") ? parseInt(formData.get("size") as string) : undefined,
-      region: formData.get("region") as any,
-      vertical: formData.get("vertical") as any,
+      industry: industry && industry !== "" ? industry as any : undefined,
+      size: parsedSize && !isNaN(parsedSize) ? parsedSize : undefined,
+      region: region && region !== "" ? region as any : undefined,
+      vertical: vertical && vertical !== "" ? vertical as any : undefined,
       website: formData.get("website") as string || undefined,
       phone: formData.get("phone") as string || undefined,
       description: formData.get("description") as string || undefined,
-      ownerId: user?.id || 1,
-    });
+      ownerId: user.id,
+    };
+    
+    console.log("Creating account with data:", accountData);
+    createMutation.mutate(accountData);
   };
 
   const filteredAccounts = accounts?.filter(account =>
@@ -149,7 +167,7 @@ export default function Accounts() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="industry">Industry</Label>
-                      <Select name="industry">
+                      <Select name="industry" value={industry} onValueChange={setIndustry}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select industry" />
                         </SelectTrigger>
@@ -169,7 +187,7 @@ export default function Accounts() {
                     
                     <div className="grid gap-2">
                       <Label htmlFor="vertical">Vertical</Label>
-                      <Select name="vertical">
+                      <Select name="vertical" value={vertical} onValueChange={setVertical}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select vertical" />
                         </SelectTrigger>
@@ -187,7 +205,7 @@ export default function Accounts() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="region">Region</Label>
-                      <Select name="region">
+                      <Select name="region" value={region} onValueChange={setRegion}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select region" />
                         </SelectTrigger>

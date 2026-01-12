@@ -302,3 +302,7 @@
 - [x] Add date range filters to Reports page (Last 30 Days, Quarter, Year, Custom)
 - [x] Create PDF export functionality for Reports page
 - [x] Build forecast projections chart based on pipeline and historical data
+- [x] Fix React error #321 when creating accounts
+- [x] Fix lead creation error - implemented controlled state for select fields
+- [x] Fix account creation - implemented controlled state for select fields
+- [ ] Debug module loading error preventing form submissions from working
