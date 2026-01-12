@@ -411,6 +411,8 @@ export const emailConnections = mysqlTable("emailConnections", {
   refreshToken: text("refreshToken"),
   tokenExpiry: timestamp("tokenExpiry"),
   scope: text("scope"), // granted permissions
+  webhookSubscriptionId: varchar("webhookSubscriptionId", { length: 255 }), // for Outlook Graph webhooks
+  webhookExpiry: timestamp("webhookExpiry"), // when webhook subscription expires
   isActive: int("isActive").default(1).notNull(),
   lastSyncAt: timestamp("lastSyncAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -203,3 +203,32 @@
 - [x] Add OAuth redirect handling
 - [x] Show connection status and errors
 - [ ] Test complete OAuth flow end-to-end
+
+
+## Real-Time Email Sync - Webhook Implementation
+
+### Gmail Pub/Sub Webhooks
+- [ ] Set up Gmail Pub/Sub topic and subscription
+- [x] Implement webhook endpoint for Gmail push notifications
+- [x] Add signature verification for Gmail webhooks
+- [ ] Handle watch renewal (7-day expiration)
+- [x] Process incoming email notifications in real-time
+- [x] Add error handling and retry logic
+
+### Microsoft Graph Webhooks
+- [x] Implement webhook endpoint for Microsoft Graph notifications
+- [x] Add signature validation for Graph webhooks
+- [ ] Handle subscription renewal (3-day expiration)
+- [x] Process incoming email notifications in real-time
+- [x] Add error handling and retry logic
+
+### OAuth Setup Guide
+- [x] Create comprehensive guide for Google Cloud Console setup
+- [x] Document Gmail API enablement steps
+- [x] Add screenshots for OAuth 2.0 Client ID creation
+- [x] Document redirect URI configuration
+- [x] Create guide for Azure Portal app registration
+- [x] Document Microsoft Graph API permissions
+- [x] Add screenshots for client secret creation
+- [x] Include environment variable configuration instructions
+- [x] Add troubleshooting section

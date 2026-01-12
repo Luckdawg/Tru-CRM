@@ -4,6 +4,7 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import emailOAuthRoutes from '../oauthRoutes';
+import webhookRoutes from '../webhooks';
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -13,6 +14,9 @@ function getQueryParam(req: Request, key: string): string | undefined {
 export function registerOAuthRoutes(app: Express) {
   // Email OAuth routes
   app.use('/api', emailOAuthRoutes);
+  
+  // Webhook routes
+  app.use('/api', webhookRoutes);
 
   // Manus OAuth callback
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
