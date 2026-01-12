@@ -5,31 +5,47 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Accounts from "./pages/Accounts";
+import AccountDetail from "./pages/AccountDetail";
+import Contacts from "./pages/Contacts";
+import ContactDetail from "./pages/ContactDetail";
+import Leads from "./pages/Leads";
+import LeadDetail from "./pages/LeadDetail";
+import Opportunities from "./pages/Opportunities";
+import OpportunityDetail from "./pages/OpportunityDetail";
+import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
+import Cases from "./pages/Cases";
+import CaseDetail from "./pages/CaseDetail";
+import Dashboard from "./pages/Dashboard";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Dashboard} />
+      <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/accounts"} component={Accounts} />
+      <Route path={"/accounts/:id"} component={AccountDetail} />
+      <Route path={"/contacts"} component={Contacts} />
+      <Route path={"/contacts/:id"} component={ContactDetail} />
+      <Route path={"/leads"} component={Leads} />
+      <Route path={"/leads/:id"} component={LeadDetail} />
+      <Route path={"/opportunities"} component={Opportunities} />
+      <Route path={"/opportunities/:id"} component={OpportunityDetail} />
+      <Route path={"/projects"} component={Projects} />
+      <Route path={"/projects/:id"} component={ProjectDetail} />
+      <Route path={"/cases"} component={Cases} />
+      <Route path={"/cases/:id"} component={CaseDetail} />
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />
