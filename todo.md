@@ -299,3 +299,6 @@
 - [ ] Implement CSV parsing and validation
 - [ ] Handle duplicate detection during import
 - [ ] Show import summary (success/errors)
+- [x] Add date range filters to Reports page (Last 30 Days, Quarter, Year, Custom)
+- [x] Create PDF export functionality for Reports page
+- [x] Build forecast projections chart based on pipeline and historical data

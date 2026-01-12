@@ -782,3 +782,60 @@ export async function getLeadsBySource() {
   .from(leads)
   .groupBy(leads.leadSource);
 }
+
+export async function getForecastProjection() {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Get historical win rate (last 90 days)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  
+  const historicalResult = await db.select({
+    totalClosed: sql<number>`count(*)`,
+    totalWon: sql<number>`sum(case when ${opportunities.stage} = 'Closed Won' then 1 else 0 end)`,
+    avgDealSize: sql<number>`avg(case when ${opportunities.stage} = 'Closed Won' then ${opportunities.amount} else null end)`,
+  })
+  .from(opportunities)
+  .where(
+    and(
+      sql`${opportunities.stage} IN ('Closed Won', 'Closed Lost')`,
+      sql`${opportunities.closedAt} >= ${ninetyDaysAgo}`
+    )
+  );
+  
+  const totalClosed = historicalResult[0]?.totalClosed || 0;
+  const totalWon = historicalResult[0]?.totalWon || 0;
+  const avgDealSize = historicalResult[0]?.avgDealSize || 0;
+  
+  // Calculate win rate
+  const winRate = totalClosed > 0 ? totalWon / totalClosed : 0.3; // Default to 30% if no data
+  
+  // Get current pipeline grouped by expected close month
+  const pipelineResult = await db.select({
+    month: sql<string>`DATE_FORMAT(${opportunities.closeDate}, '%Y-%m')`.as('month'),
+    count: sql<number>`count(*)`,
+    totalValue: sql<number>`sum(${opportunities.amount})`,
+  })
+  .from(opportunities)
+  .where(
+    and(
+      sql`${opportunities.stage} NOT IN ('Closed Won', 'Closed Lost')`,
+      sql`${opportunities.closeDate} >= CURDATE()`
+    )
+  )
+  .groupBy(sql`month`)
+  .orderBy(sql`month`)
+  .limit(6); // Next 6 months
+  
+  return {
+    winRate,
+    avgDealSize,
+    pipeline: pipelineResult.map(item => ({
+      month: item.month,
+      opportunityCount: Number(item.count),
+      pipelineValue: Number(item.totalValue),
+      forecastedRevenue: Number(item.totalValue) * winRate,
+    })),
+  };
+}

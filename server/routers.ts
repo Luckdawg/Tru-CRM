@@ -690,6 +690,10 @@ export const appRouter = router({
     leadsBySource: protectedProcedure.query(async () => {
       return await db.getLeadsBySource();
     }),
+    
+    forecastProjection: protectedProcedure.query(async () => {
+      return await db.getForecastProjection();
+    }),
   }),
 
   // Lead scoring automation

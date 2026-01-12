@@ -2,12 +2,55 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Download, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { useState, useMemo, useRef } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Reports() {
   const { user, isAuthenticated } = useAuth();
+  const [dateRange, setDateRange] = useState<string>("all");
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    
+    setIsExporting(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+      
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`visium-crm-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('PDF export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   const { data: pipelineData, isLoading: loadingPipeline } = trpc.reports.opportunitiesByCloseDate.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -29,11 +72,15 @@ export default function Reports() {
     enabled: isAuthenticated,
   });
 
+  const { data: forecastData, isLoading: loadingForecast } = trpc.reports.forecastProjection.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   if (!isAuthenticated) {
     return <div>Please sign in</div>;
   }
 
-  const isLoading = loadingPipeline || loadingRevenue || loadingType || loadingStage || loadingLeads;
+  const isLoading = loadingPipeline || loadingRevenue || loadingType || loadingStage || loadingLeads || loadingForecast;
 
   // Format data for charts
   const formattedPipelineData = pipelineData?.map(item => ({
@@ -63,6 +110,12 @@ export default function Reports() {
   const formattedLeadData = leadSourceData?.map(item => ({
     source: item.source,
     count: Number(item.count),
+  })) || [];
+
+  const formattedForecastData = forecastData?.pipeline.map(item => ({
+    month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+    pipelineValue: item.pipelineValue / 1000,
+    forecastedRevenue: item.forecastedRevenue / 1000,
   })) || [];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -106,13 +159,69 @@ export default function Reports() {
           <BarChart3 className="h-8 w-8 text-primary" />
         </div>
 
+        {/* Filters and Export */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="dateRange">Date Range</Label>
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger id="dateRange">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="30">Last 30 Days</SelectItem>
+                    <SelectItem value="90">Last Quarter</SelectItem>
+                    <SelectItem value="365">Last Year</SelectItem>
+                    <SelectItem value="custom">Custom Range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {dateRange === "custom" && (
+                <>
+                  <div className="flex-1 min-w-[150px]">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[150px]">
+                    <Label htmlFor="endDate">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+              
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={handleExportPDF}
+                disabled={isExporting}
+              >
+                <Download className="h-4 w-4" />
+                {isExporting ? 'Exporting...' : 'Export PDF'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="mt-4 text-muted-foreground">Loading reports...</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div ref={reportRef} className="space-y-6">
             {/* Pipeline by Stage */}
             <Card>
               <CardHeader>
@@ -266,6 +375,37 @@ export default function Reports() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Revenue Forecast */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue Forecast</CardTitle>
+                <CardDescription>
+                  Projected revenue based on pipeline and {forecastData ? `${Math.round(forecastData.winRate * 100)}%` : '--'} historical win rate
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {formattedForecastData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={formattedForecastData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value: number) => [`$${value.toFixed(0)}K`]}
+                      />
+                      <Legend />
+                      <Bar dataKey="pipelineValue" fill="#8884d8" name="Pipeline Value ($K)" />
+                      <Bar dataKey="forecastedRevenue" fill="#82ca9d" name="Forecasted Revenue ($K)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No forecast data available. Add opportunities with future close dates to see projections.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
       </main>
