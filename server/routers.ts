@@ -588,8 +588,31 @@ export const appRouter = router({
           notes: z.string().optional(),
         }),
       }))
-      .mutation(async ({ input }) => {
-        return await db.updateProject(input.id, input.data);
+      .mutation(async ({ input, ctx }) => {
+        // Get current project state before update
+        const currentProject = await db.getProjectById(input.id);
+        const previousHealthStatus = currentProject?.healthStatus;
+        
+        // Update the project
+        const result = await db.updateProject(input.id, input.data);
+        
+        // Check if health status changed to At Risk or Critical
+        const newHealthStatus = input.data.healthStatus;
+        if (newHealthStatus && newHealthStatus !== previousHealthStatus) {
+          if (newHealthStatus === "At Risk" || newHealthStatus === "Critical") {
+            // Send notification to project owner
+            const project = await db.getProjectById(input.id);
+            if (project) {
+              const { notifyOwner } = await import("./_core/notification");
+              await notifyOwner({
+                title: `⚠️ Project Health Alert: ${project.projectName}`,
+                content: `Project "${project.projectName}" health status has changed to ${newHealthStatus}. Please review and take action if needed.\n\nView project: ${ctx.req.protocol}://${ctx.req.headers.host || 'localhost'}/projects/${project.id}`,
+              });
+            }
+          }
+        }
+        
+        return result;
       }),
     
     delete: protectedProcedure

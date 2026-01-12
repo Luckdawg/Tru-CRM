@@ -90,6 +90,9 @@ export default function ProjectDetail() {
   }, [project]);
 
   const handleSave = () => {
+    console.log("=== handleSave called ===");
+    console.log("formData:", formData);
+    
     if (!formData.projectName) {
       toast.error("Project name is required");
       return;

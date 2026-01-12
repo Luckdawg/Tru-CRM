@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Plus, FolderKanban } from "lucide-react";
+import { Plus, FolderKanban, AlertTriangle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import {
@@ -85,6 +85,21 @@ export default function Projects() {
       "Cancelled": "bg-gray-100 text-gray-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const getHealthColor = (health: string) => {
+    const colors: Record<string, string> = {
+      "Healthy": "bg-green-100 text-green-800",
+      "At Risk": "bg-yellow-100 text-yellow-800",
+      "Critical": "bg-red-100 text-red-800",
+    };
+    return colors[health] || "bg-gray-100 text-gray-800";
+  };
+
+  const getHealthIcon = (health: string) => {
+    if (health === "Critical") return <AlertCircle className="h-4 w-4" />;
+    if (health === "At Risk") return <AlertTriangle className="h-4 w-4" />;
+    return null;
   };
 
   if (!isAuthenticated) {
@@ -232,6 +247,14 @@ export default function Projects() {
                             <Badge className={getStatusColor(project.status)}>
                               {project.status}
                             </Badge>
+                            {project.healthStatus && project.healthStatus !== "Healthy" && (
+                              <Badge className={getHealthColor(project.healthStatus)} variant="outline">
+                                <span className="flex items-center gap-1">
+                                  {getHealthIcon(project.healthStatus)}
+                                  {project.healthStatus}
+                                </span>
+                              </Badge>
+                            )}
                           </div>
                           <CardDescription>
                             Implementation Project

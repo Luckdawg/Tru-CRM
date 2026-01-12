@@ -323,3 +323,13 @@
 ## Bug Fixes - Current Issues
 
 - [x] Fix Project Detail page showing blank screen when clicking on a project from Projects list
+
+
+## New Feature - Project Health Alert System
+
+- [x] Design notification logic for health status changes (At Risk, Critical)
+- [x] Implement backend notification trigger in projects.update procedure
+- [x] Add visual health indicators (badges/icons) to Projects list page
+- [x] Create alert banner for critical projects on dashboard
+- [x] Test notification delivery when health status changes
+- [x] Write unit tests for health alert notification logic

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, Building2, DollarSign, TrendingUp, Users, FileText, Briefcase } from "lucide-react";
+import { BarChart3, Building2, DollarSign, TrendingUp, Users, FileText, Briefcase, AlertTriangle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Dashboard() {
@@ -20,6 +20,13 @@ export default function Dashboard() {
   const { data: avgDealSize } = trpc.dashboard.averageDealSize.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const { data: projects } = trpc.projects.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  // Calculate at-risk and critical projects
+  const atRiskProjects = projects?.filter((p: any) => p.healthStatus === "At Risk") || [];
+  const criticalProjects = projects?.filter((p: any) => p.healthStatus === "Critical") || [];
 
   if (loading) {
     return (
@@ -106,6 +113,59 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold text-foreground mb-2">Sales Dashboard</h2>
           <p className="text-muted-foreground">Overview of your sales pipeline and key metrics</p>
         </div>
+
+        {/* Health Alert Banner */}
+        {(criticalProjects.length > 0 || atRiskProjects.length > 0) && (
+          <Card className="mb-6 border-l-4 border-l-red-500 bg-red-50">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <CardTitle className="text-red-900">Project Health Alerts</CardTitle>
+                  <CardDescription className="text-red-700">
+                    {criticalProjects.length > 0 && (
+                      <span className="font-medium">
+                        {criticalProjects.length} critical project{criticalProjects.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {criticalProjects.length > 0 && atRiskProjects.length > 0 && ' and '}
+                    {atRiskProjects.length > 0 && (
+                      <span className="font-medium">
+                        {atRiskProjects.length} at-risk project{atRiskProjects.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {' require immediate attention'}
+                  </CardDescription>
+                </div>
+                <Button asChild variant="outline" size="sm" className="bg-white">
+                  <Link href="/projects">View Projects</Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {criticalProjects.slice(0, 3).map((project: any) => (
+                  <Link key={project.id} href={`/projects/${project.id}`}>
+                    <div className="flex items-center gap-2 p-2 rounded hover:bg-red-100 transition-colors cursor-pointer">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="font-medium text-red-900">{project.projectName}</span>
+                      <span className="text-xs text-red-700 ml-auto">Critical</span>
+                    </div>
+                  </Link>
+                ))}
+                {atRiskProjects.slice(0, 3).map((project: any) => (
+                  <Link key={project.id} href={`/projects/${project.id}`}>
+                    <div className="flex items-center gap-2 p-2 rounded hover:bg-yellow-100 transition-colors cursor-pointer">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <span className="font-medium text-yellow-900">{project.projectName}</span>
+                      <span className="text-xs text-yellow-700 ml-auto">At Risk</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
