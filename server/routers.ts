@@ -591,6 +591,12 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await db.updateProject(input.id, input.data);
       }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteProject(input.id);
+      }),
   }),
 
   cases: router({

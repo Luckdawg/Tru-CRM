@@ -318,3 +318,8 @@
 - [x] Create Opportunity dialog opens successfully
 - [x] Opportunity validation fixes applied (accountId optional, closeDate Date conversion)
 - [x] Form submissions blocked by tRPC type generation failure - Added export type AppRouter and Dialog key prop
+
+
+## Bug Fixes - Current Issues
+
+- [x] Fix Project Detail page showing blank screen when clicking on a project from Projects list

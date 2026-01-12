@@ -517,6 +517,15 @@ export async function updateProject(id: number, data: Partial<InsertProject>) {
   return await db.update(projects).set(data).where(eq(projects.id, id));
 }
 
+export async function deleteProject(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const project = await getProjectById(id);
+  await db.delete(projects).where(eq(projects.id, id));
+  return project;
+}
+
 // ============ CASE FUNCTIONS ============
 
 export async function createCase(caseData: InsertCase) {
