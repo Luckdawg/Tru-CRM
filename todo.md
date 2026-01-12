@@ -305,4 +305,6 @@
 - [x] Fix React error #321 when creating accounts
 - [x] Fix lead creation error - implemented controlled state for select fields
 - [x] Fix account creation - implemented controlled state for select fields
-- [ ] Debug module loading error preventing form submissions from working
+- [x] Debug module loading error preventing form submissions from working - refactored to use onClick handlers
+- [x] Fix TypeScript errors in Reports.tsx (4 implicit 'any' type errors)
+- [x] Simplify form submission approach to avoid Dialog interference

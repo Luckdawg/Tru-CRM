@@ -56,10 +56,11 @@ export default function Leads() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Form submit triggered");
-    const formData = new FormData(e.currentTarget);
+  const handleCreateLead = () => {
+    console.log("Create button clicked");
+    const form = document.querySelector('form[data-lead-form]') as HTMLFormElement;
+    if (!form) return;
+    const formData = new FormData(form);
     
     const leadData = {
       firstName: formData.get("firstName") as string,
@@ -169,7 +170,7 @@ export default function Leads() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
+              <form data-lead-form>
                 <DialogHeader>
                   <DialogTitle>Create New Lead</DialogTitle>
                   <DialogDescription>
@@ -268,15 +269,7 @@ export default function Leads() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="button" onClick={(e) => {
-                    e.preventDefault();
-                    const form = e.currentTarget.closest('form');
-                    if (form) {
-                      const formEvent = new Event('submit', { bubbles: true, cancelable: true });
-                      form.dispatchEvent(formEvent);
-                      handleSubmit(formEvent as any);
-                    }
-                  }} disabled={createMutation.isPending}>
+                  <Button type="button" onClick={handleCreateLead} disabled={createMutation.isPending}>
                     {createMutation.isPending ? "Creating..." : "Create Lead"}
                   </Button>
                 </DialogFooter>

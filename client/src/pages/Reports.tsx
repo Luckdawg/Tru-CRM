@@ -83,36 +83,36 @@ export default function Reports() {
   const isLoading = loadingPipeline || loadingRevenue || loadingType || loadingStage || loadingLeads || loadingForecast;
 
   // Format data for charts
-  const formattedPipelineData = pipelineData?.map(item => ({
+  const formattedPipelineData = pipelineData?.map((item: any) => ({
     month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     opportunities: Number(item.count),
     value: Number(item.totalValue) / 1000, // Convert to thousands
   })) || [];
 
-  const formattedRevenueData = revenueData?.map(item => ({
+  const formattedRevenueData = revenueData?.map((item: any) => ({
     month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     revenue: Number(item.revenue) / 1000, // Convert to thousands
     deals: Number(item.count),
   })) || [];
 
-  const formattedStageData = stageData?.map(item => ({
+  const formattedStageData = stageData?.map((item: any) => ({
     stage: item.stage,
     count: Number(item.count),
     value: Number(item.totalValue) / 1000,
   })) || [];
 
-  const formattedTypeData = typeData?.map(item => ({
+  const formattedTypeData = typeData?.map((item: any) => ({
     type: item.type || 'Unknown',
     count: Number(item.count),
     value: Number(item.totalValue) / 1000,
   })) || [];
 
-  const formattedLeadData = leadSourceData?.map(item => ({
+  const formattedLeadData = leadSourceData?.map((item: any) => ({
     source: item.source,
     count: Number(item.count),
   })) || [];
 
-  const formattedForecastData = forecastData?.pipeline.map(item => ({
+  const formattedForecastData = forecastData?.pipeline.map((item: any) => ({
     month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     pipelineValue: item.pipelineValue / 1000,
     forecastedRevenue: item.forecastedRevenue / 1000,
@@ -335,7 +335,7 @@ export default function Reports() {
                           fill="#8884d8"
                           dataKey="count"
                         >
-                          {formattedTypeData.map((entry, index) => (
+                          {formattedTypeData.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>

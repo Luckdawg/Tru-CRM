@@ -53,9 +53,11 @@ export default function Accounts() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+  const handleCreateAccount = () => {
+    console.log("Create account button clicked");
+    const form = document.querySelector('form[data-account-form]') as HTMLFormElement;
+    if (!form) return;
+    const formData = new FormData(form);
     
     const sizeValue = formData.get("size") as string;
     const parsedSize = sizeValue && sizeValue.trim() !== "" ? parseInt(sizeValue) : undefined;
@@ -151,7 +153,7 @@ export default function Accounts() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <form onSubmit={handleSubmit}>
+              <form data-account-form>
                 <DialogHeader>
                   <DialogTitle>Create New Account</DialogTitle>
                   <DialogDescription>
@@ -247,7 +249,7 @@ export default function Accounts() {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
+                  <Button type="button" onClick={handleCreateAccount} disabled={createMutation.isPending}>
                     {createMutation.isPending ? "Creating..." : "Create Account"}
                   </Button>
                 </DialogFooter>
