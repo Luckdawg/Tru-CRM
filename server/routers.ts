@@ -4,6 +4,9 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { getDb } from "./db";
+import { leads } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export const appRouter = router({
   system: systemRouter,
@@ -586,9 +589,96 @@ export const appRouter = router({
       return await db.getWonOpportunities();
     }),
     
-    lostOpportunities: protectedProcedure.query(async () => {
+      lostOpportunities: protectedProcedure.query(async () => {
       return await db.getLostOpportunities();
     }),
+  }),
+
+  // Lead scoring automation
+  leadScoring: router({
+    calculateScore: publicProcedure
+      .input(z.object({ leadId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const lead = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+        if (!lead.length) throw new Error("Lead not found");
+
+        const leadData = lead[0];
+        let score = 0;
+
+        // Scoring rules
+        // Company size/segment
+        if (leadData.segment === "Enterprise") score += 30;
+        else if (leadData.segment === "Mid-Market") score += 20;
+        else if (leadData.segment === "SMB") score += 10;
+
+        // Lead source quality
+        if (leadData.leadSource === "Partner Referral") score += 25;
+        else if (leadData.leadSource === "Trade Show") score += 20;
+        else if (leadData.leadSource === "Webinar") score += 15;
+        else if (leadData.leadSource === "Website") score += 10;
+        else score += 5;
+
+        // Engagement indicators
+        if (leadData.title && ["CISO", "CIO", "CTO", "VP"].some(t => leadData.title?.includes(t))) {
+          score += 25; // Decision maker
+        }
+
+        // Industry fit
+        const highValueIndustries = ["Manufacturing", "Energy", "Utilities", "Transportation"];
+        if (leadData.industry && highValueIndustries.some(i => leadData.industry?.includes(i))) {
+          score += 20;
+        }
+
+        // Update lead score
+        await db.update(leads)
+          .set({ score, updatedAt: new Date() })
+          .where(eq(leads.id, input.leadId));
+
+        return { leadId: input.leadId, score };
+      }),
+
+    autoScore: publicProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const allLeads = await db.select().from(leads).where(eq(leads.status, "New"));
+        let scored = 0;
+
+        for (const lead of allLeads) {
+          let score = 0;
+
+          if (lead.segment === "Enterprise") score += 30;
+          else if (lead.segment === "Mid-Market") score += 20;
+          else if (lead.segment === "SMB") score += 10;
+
+          if (lead.leadSource === "Partner Referral") score += 25;
+          else if (lead.leadSource === "Trade Show") score += 20;
+          else if (lead.leadSource === "Webinar") score += 15;
+          else if (lead.leadSource === "Website") score += 10;
+          else score += 5;
+
+          if (lead.title && ["CISO", "CIO", "CTO", "VP"].some(t => lead.title?.includes(t))) {
+            score += 25;
+          }
+
+          const highValueIndustries = ["Manufacturing", "Energy", "Utilities", "Transportation"];
+          if (lead.industry && highValueIndustries.some(i => lead.industry?.includes(i))) {
+            score += 20;
+          }
+
+          await db.update(leads)
+            .set({ score, updatedAt: new Date() })
+            .where(eq(leads.id, lead.id));
+
+          scored++;
+        }
+
+        return { scored };
+      }),
   }),
 });
 

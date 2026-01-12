@@ -123,7 +123,8 @@ export async function createAccount(account: InsertAccount) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(accounts).values(account);
-  return result;
+  const insertId = Number(result[0].insertId);
+  return await getAccountById(insertId);
 }
 
 export async function getAccountById(id: number) {
@@ -249,7 +250,9 @@ export async function createLead(lead: InsertLead) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  return await db.insert(leads).values(lead);
+  const result = await db.insert(leads).values(lead);
+  const insertId = Number(result[0].insertId);
+  return await getLeadById(insertId);
 }
 
 export async function getLeadById(id: number) {

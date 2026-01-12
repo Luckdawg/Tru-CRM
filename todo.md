@@ -104,3 +104,46 @@
 - [ ] Customer success role permissions
 - [ ] Executive full access
 - [ ] Partner user limited access
+
+## New Requirements - Phase 2
+
+### Complete Remaining UI Pages
+- [x] Build Leads list page with filtering and search
+- [ ] Build Lead detail page with conversion functionality
+- [x] Build Contacts list page with account filtering
+- [ ] Build Contact detail page with activity history
+- [x] Build Opportunities list page with stage filtering
+- [x] Build Opportunity detail page with MEDDIC form
+- [x] Build Projects list page with status tracking
+- [ ] Build Project detail page with milestones
+- [x] Build Support Cases list page with priority filtering
+- [ ] Build Case detail page with resolution tracking
+
+### MEDDIC Methodology Implementation
+- [x] Add MEDDIC fields to opportunity detail form
+- [x] Create Metrics tracking section
+- [x] Add Economic Buyer selection
+- [x] Implement Decision Criteria capture
+- [x] Add Decision Process documentation
+- [x] Create Identify Pain section
+- [x] Add Champion identification and tracking
+- [x] Build MEDDIC qualification checklist
+
+### Advanced Features
+- [x] Implement Kanban board for opportunity pipeline
+- [x] Add drag-and-drop stage transitions
+- [ ] Build activity timeline component
+- [x] Create lead scoring automation rules
+- [x] Build sales analytics dashboard with charts
+- [x] Add pipeline forecast visualization
+- [x] Implement win rate calculations
+- [x] Add sales velocity metrics
+- [x] Create ARR/MRR tracking
+- [ ] Build quota attainment tracking
+
+### Testing
+- [ ] Write tests for lead management
+- [ ] Write tests for opportunity MEDDIC tracking
+- [ ] Write tests for lead scoring automation
+- [ ] Write tests for pipeline analytics
+- [ ] Verify all CRUD operations work correctly

@@ -11,7 +11,9 @@ import Contacts from "./pages/Contacts";
 import ContactDetail from "./pages/ContactDetail";
 import Leads from "./pages/Leads";
 import LeadDetail from "./pages/LeadDetail";
-import Opportunities from "./pages/Opportunities";
+import Opportunities from "@/pages/Opportunities";
+import Pipeline from "@/pages/Pipeline";
+import Analytics from "@/pages/Analytics";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -31,7 +33,9 @@ function Router() {
       <Route path={"/leads"} component={Leads} />
       <Route path={"/leads/:id"} component={LeadDetail} />
       <Route path={"/opportunities"} component={Opportunities} />
-      <Route path={"/opportunities/:id"} component={OpportunityDetail} />
+      <Route path="/opportunities/:id" component={OpportunityDetail} />
+      <Route path="/pipeline" component={Pipeline} />
+      <Route path="/analytics" component={Analytics} />
       <Route path={"/projects"} component={Projects} />
       <Route path={"/projects/:id"} component={ProjectDetail} />
       <Route path={"/cases"} component={Cases} />
