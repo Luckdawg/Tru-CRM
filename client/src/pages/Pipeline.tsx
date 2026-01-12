@@ -28,7 +28,7 @@ const STAGES: OpportunityStage[] = [
 interface Opportunity {
   id: number;
   opportunityName: string;
-  accountId: number;
+  accountId: number | null;
   stage: OpportunityStage;
   amount: string;
   probability: number | null;

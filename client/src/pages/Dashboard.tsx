@@ -159,7 +159,7 @@ export default function Dashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{avgDealSize !== null ? `$${Math.round(avgDealSize).toLocaleString()}` : '--'}</div>
+                <div className="text-2xl font-bold">{avgDealSize ? `$${Math.round(avgDealSize).toLocaleString()}` : '--'}</div>
                 <p className="text-xs text-muted-foreground mt-1">This quarter</p>
               </CardContent>
             </Card>

@@ -60,7 +60,7 @@ export default function LeadDetail() {
     company: "",
     title: "",
     leadSource: "Website" as const,
-    status: "New" as const,
+    status: "New" as "New" | "Working" | "Qualified" | "Disqualified" | "Converted",
     segment: "SMB" as const,
     score: 0,
     notes: "",

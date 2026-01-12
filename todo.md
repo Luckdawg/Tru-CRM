@@ -309,12 +309,12 @@
 - [x] Fix TypeScript errors in Reports.tsx (4 implicit 'any' type errors)
 - [x] Simplify form submission approach to avoid Dialog interference
 - [x] Fix Create Opportunity button on Opportunities page - dialog opens successfully
-- [ ] Fix opportunity creation submission - TypeScript build errors (121 errors) preventing JavaScript execution
-- [ ] Resolve tRPC type generation issue - 'reports' router not recognized despite being defined
-- [ ] Fix all create form submissions across CRM (leads, accounts, contacts, opportunities) - blocked by build errors
+- [x] Fix opportunity creation submission - TypeScript build errors (121 errors) preventing JavaScript execution
+- [x] Resolve tRPC type generation issue - 'reports' router not recognized despite being defined
+- [x] Fix all create form submissions across CRM (leads, accounts, contacts, opportunities) - blocked by build errors
 - [x] Fix opportunity creation validation errors - accountId optional, closeDate converted to Date
-- [ ] Fix tRPC router configuration - 'useContext collision' error blocking all tRPC functionality
-- [ ] Resolve 115+ TypeScript errors preventing JavaScript execution
+- [x] Fix tRPC router configuration - 'useContext collision' error blocking all tRPC functionality
+- [x] Resolve 115+ TypeScript errors preventing JavaScript execution
 - [x] Create Opportunity dialog opens successfully
 - [x] Opportunity validation fixes applied (accountId optional, closeDate Date conversion)
-- [ ] Form submissions blocked by tRPC type generation failure
+- [x] Form submissions blocked by tRPC type generation failure - Added export type AppRouter and Dialog key prop

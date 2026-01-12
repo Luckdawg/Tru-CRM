@@ -17,7 +17,7 @@ export default function CSVImportExport({ type }: CSVImportExportProps) {
   const [file, setFile] = useState<File | null>(null);
 
   const { data: leads } = trpc.leads.list.useQuery({}, { enabled: type === "leads" });
-  const { data: contacts } = trpc.contacts.list.useQuery({ enabled: type === "contacts" });
+  const { data: contacts } = trpc.contacts.list.useQuery(undefined, { enabled: type === "contacts" });
   
   const createLead = trpc.leads.create.useMutation();
   const createContact = trpc.contacts.create.useMutation();

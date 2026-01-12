@@ -20,8 +20,8 @@ export default function Opportunities() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [oppName, setOppName] = useState("");
   const [oppAmount, setOppAmount] = useState("");
-  const [oppStage, setOppStage] = useState("Discovery");
-  const [oppType, setOppType] = useState("New Business");
+  const [oppStage, setOppStage] = useState<"Discovery" | "Solution Fit" | "PoC/Trial" | "Security Review" | "Procurement" | "Verbal Commit" | "Closed Won" | "Closed Lost">("Discovery");
+  const [oppType, setOppType] = useState<"New Business" | "Expansion" | "Renewal">("New Business");
   const [oppProbability, setOppProbability] = useState("10");
   const [oppCloseDate, setOppCloseDate] = useState("");
 
@@ -56,12 +56,12 @@ export default function Opportunities() {
     }
     createOpportunity.mutate({
       opportunityName: oppName,
-      amount: parseFloat(oppAmount) || 0,
+      amount: oppAmount,
       stage: oppStage,
       type: oppType,
       probability: parseInt(oppProbability) || 0,
       closeDate: new Date(oppCloseDate),
-      accountId: accounts && accounts.length > 0 ? accounts[0].id : undefined,
+      accountId: undefined,
       ownerId: user!.id,
     });
   };
@@ -139,7 +139,7 @@ export default function Opportunities() {
             <h2 className="text-2xl font-bold text-foreground">Sales Pipeline</h2>
             <p className="text-muted-foreground">Track and manage your sales opportunities</p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <Dialog key={isCreateDialogOpen ? 'open' : 'closed'} open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -162,7 +162,7 @@ export default function Opportunities() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="opp-stage">Stage</Label>
-                  <Select value={oppStage} onValueChange={setOppStage}>
+                  <Select value={oppStage} onValueChange={(value) => setOppStage(value as typeof oppStage)}>
                     <SelectTrigger id="opp-stage">
                       <SelectValue />
                     </SelectTrigger>
@@ -179,7 +179,7 @@ export default function Opportunities() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="opp-type">Type</Label>
-                  <Select value={oppType} onValueChange={setOppType}>
+                  <Select value={oppType} onValueChange={(value) => setOppType(value as typeof oppType)}>
                     <SelectTrigger id="opp-type">
                       <SelectValue />
                     </SelectTrigger>
