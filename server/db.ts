@@ -9,6 +9,7 @@ import {
   opportunities, 
   activities,
   projects,
+  milestones,
   cases,
   products,
   lineItems,
@@ -19,6 +20,7 @@ import {
   InsertOpportunity,
   InsertActivity,
   InsertProject,
+  InsertMilestone,
   InsertCase,
   InsertProduct,
   InsertLineItem,
@@ -524,6 +526,72 @@ export async function deleteProject(id: number) {
   const project = await getProjectById(id);
   await db.delete(projects).where(eq(projects.id, id));
   return project;
+}
+
+// ============ MILESTONE FUNCTIONS ============
+
+export async function getMilestonesByProject(projectId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db
+    .select()
+    .from(milestones)
+    .where(eq(milestones.projectId, projectId))
+    .orderBy(asc(milestones.displayOrder), asc(milestones.dueDate));
+}
+
+export async function getMilestoneById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(milestones).where(eq(milestones.id, id));
+  return result[0] || null;
+}
+
+export async function createMilestone(milestoneData: InsertMilestone) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.insert(milestones).values(milestoneData);
+}
+
+export async function updateMilestone(id: number, data: Partial<InsertMilestone>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(milestones).set(data).where(eq(milestones.id, id));
+  return await getMilestoneById(id);
+}
+
+export async function deleteMilestone(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const milestone = await getMilestoneById(id);
+  await db.delete(milestones).where(eq(milestones.id, id));
+  return milestone;
+}
+
+export async function toggleMilestoneComplete(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const milestone = await getMilestoneById(id);
+  if (!milestone) throw new Error("Milestone not found");
+  
+  const isCompleted = milestone.status === "Completed";
+  const newStatus = isCompleted ? "In Progress" : "Completed";
+  const completedDate = isCompleted ? null : new Date();
+  
+  await db.update(milestones)
+    .set({ 
+      status: newStatus,
+      completedDate: completedDate
+    })
+    .where(eq(milestones.id, id));
+  
+  return await getMilestoneById(id);
 }
 
 // ============ CASE FUNCTIONS ============

@@ -17,6 +17,8 @@ import { ArrowLeft, Edit2, Save, X, FolderKanban, Calendar, TrendingUp, Users, H
 import { Link, useParams, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import MilestoneTimeline from "@/components/MilestoneTimeline";
+import MilestoneProgress from "@/components/MilestoneProgress";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -472,6 +474,22 @@ export default function ProjectDetail() {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Milestones Timeline - Full Width */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Project Milestones</CardTitle>
+                  <CardDescription>Track key deliverables and project progress</CardDescription>
+                </div>
+                <MilestoneProgress projectId={Number(id)} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <MilestoneTimeline projectId={Number(id)} />
             </CardContent>
           </Card>
         </div>

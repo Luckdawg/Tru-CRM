@@ -961,6 +961,64 @@ export const appRouter = router({
     }),
    }),
 
+  milestones: router({
+    list: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getMilestonesByProject(input.projectId);
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getMilestoneById(input.id);
+      }),
+
+    create: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.number(),
+          title: z.string().min(1, "Title is required"),
+          description: z.string().optional(),
+          dueDate: z.date().optional(),
+          status: z.enum(["Not Started", "In Progress", "Completed", "Blocked"]).default("Not Started"),
+          displayOrder: z.number().default(0),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await db.createMilestone(input);
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          data: z.object({
+            title: z.string().optional(),
+            description: z.string().optional(),
+            dueDate: z.date().optional(),
+            status: z.enum(["Not Started", "In Progress", "Completed", "Blocked"]).optional(),
+            displayOrder: z.number().optional(),
+          }),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await db.updateMilestone(input.id, input.data);
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteMilestone(input.id);
+      }),
+
+    toggleComplete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.toggleMilestoneComplete(input.id);
+      }),
+  }),
+
 });
 
 export type AppRouter = typeof appRouter;

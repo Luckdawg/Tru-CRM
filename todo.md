@@ -333,3 +333,16 @@
 - [x] Create alert banner for critical projects on dashboard
 - [x] Test notification delivery when health status changes
 - [x] Write unit tests for health alert notification logic
+
+
+## New Feature - Project Milestone Timeline
+
+- [x] Design milestones table schema (projectId, title, description, dueDate, completedDate, status, order)
+- [x] Add milestone CRUD procedures to backend
+- [x] Create timeline UI component with visual progress indicators
+- [x] Add milestone creation form to Project Detail page
+- [x] Implement milestone completion toggle
+- [x] Add milestone editing and deletion
+- [x] Show overdue milestones with warning indicators
+- [x] Calculate project progress percentage from milestones
+- [x] Write unit tests for milestone procedures

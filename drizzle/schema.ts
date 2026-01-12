@@ -357,6 +357,32 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = typeof projects.$inferInsert;
 
 /**
+ * Milestones - Project milestones and deliverables
+ */
+export const milestones = mysqlTable("milestones", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  dueDate: timestamp("dueDate"),
+  completedDate: timestamp("completedDate"),
+  status: mysqlEnum("status", [
+    "Not Started",
+    "In Progress",
+    "Completed",
+    "Blocked"
+  ]).default("Not Started").notNull(),
+  displayOrder: int("displayOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectIdx: index("project_idx").on(table.projectId),
+}));
+
+export type Milestone = typeof milestones.$inferSelect;
+export type InsertMilestone = typeof milestones.$inferInsert;
+
+/**
  * Cases - Support tickets
  */
 export const cases = mysqlTable("cases", {
