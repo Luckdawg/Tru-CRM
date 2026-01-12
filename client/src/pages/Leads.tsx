@@ -204,11 +204,13 @@ export default function Leads() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Website">Website</SelectItem>
-                          <SelectItem value="Referral">Referral</SelectItem>
-                          <SelectItem value="Event">Event</SelectItem>
-                          <SelectItem value="Partner">Partner</SelectItem>
+                          <SelectItem value="Trade Show">Trade Show</SelectItem>
+                          <SelectItem value="Partner Referral">Partner Referral</SelectItem>
                           <SelectItem value="Cold Outreach">Cold Outreach</SelectItem>
-                          <SelectItem value="Inbound">Inbound</SelectItem>
+                          <SelectItem value="Webinar">Webinar</SelectItem>
+                          <SelectItem value="Content Download">Content Download</SelectItem>
+                          <SelectItem value="Social Media">Social Media</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

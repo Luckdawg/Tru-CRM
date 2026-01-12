@@ -256,3 +256,9 @@
 - [x] Add monitoring and alerting for failed renewals
 - [x] Implement graceful shutdown handling
 - [x] Add manual renewal endpoint for testing
+
+
+## Bug Fixes - Current
+
+- [x] Fix lead creation form - leadSource field using invalid enum values (needs to match database schema)
+- [x] Create lead detail page with edit functionality (clicking on lead shows blank screen)
