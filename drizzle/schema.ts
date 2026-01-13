@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, index, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -471,3 +471,100 @@ export const emailConnections = mysqlTable("emailConnections", {
 
 export type EmailConnection = typeof emailConnections.$inferSelect;
 export type InsertEmailConnection = typeof emailConnections.$inferInsert;
+
+/**
+ * Forecast Snapshots - Historical forecast data for accuracy tracking
+ */
+export const forecastSnapshots = mysqlTable("forecastSnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  snapshotDate: timestamp("snapshotDate").notNull(),
+  periodType: mysqlEnum("periodType", ["Month", "Quarter", "Year"]).notNull(),
+  periodStart: timestamp("periodStart").notNull(),
+  periodEnd: timestamp("periodEnd").notNull(),
+  forecastAmount: decimal("forecastAmount", { precision: 15, scale: 2 }).notNull(),
+  weightedAmount: decimal("weightedAmount", { precision: 15, scale: 2 }).notNull(),
+  opportunityCount: int("opportunityCount").notNull(),
+  ownerId: int("ownerId"), // null = company-wide
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  periodIdx: index("period_idx").on(table.periodStart, table.periodEnd),
+  ownerIdx: index("owner_idx").on(table.ownerId),
+}));
+
+export type ForecastSnapshot = typeof forecastSnapshots.$inferSelect;
+export type InsertForecastSnapshot = typeof forecastSnapshots.$inferInsert;
+
+/**
+ * Forecast Snapshot Opportunities - Individual opportunities in a snapshot
+ */
+export const forecastSnapshotOpportunities = mysqlTable("forecastSnapshotOpportunities", {
+  id: int("id").autoincrement().primaryKey(),
+  snapshotId: int("snapshotId").notNull(),
+  opportunityId: int("opportunityId").notNull(),
+  opportunityName: varchar("opportunityName", { length: 255 }).notNull(),
+  stage: varchar("stage", { length: 100 }).notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  probability: int("probability").notNull(),
+  weightedAmount: decimal("weightedAmount", { precision: 15, scale: 2 }).notNull(),
+  closeDate: timestamp("closeDate").notNull(),
+  accountName: varchar("accountName", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  snapshotIdx: index("snapshot_idx").on(table.snapshotId),
+  opportunityIdx: index("opportunity_idx").on(table.opportunityId),
+}));
+
+export type ForecastSnapshotOpportunity = typeof forecastSnapshotOpportunities.$inferSelect;
+export type InsertForecastSnapshotOpportunity = typeof forecastSnapshotOpportunities.$inferInsert;
+
+/**
+ * Saved Reports - Custom report templates
+ */
+export const savedReports = mysqlTable("savedReports", {
+  id: int("id").autoincrement().primaryKey(),
+  reportName: varchar("reportName", { length: 255 }).notNull(),
+  reportType: mysqlEnum("reportType", ["PreBuilt", "Custom"]).notNull(),
+  category: varchar("category", { length: 100 }), // "Sales", "Forecast", "Engagement", etc.
+  description: text("description"),
+  queryConfig: json("queryConfig"), // JSON configuration for custom reports
+  columns: json("columns"), // Selected columns to display
+  filters: json("filters"), // Filter conditions
+  sorting: json("sorting"), // Sort configuration
+  grouping: json("grouping"), // Group by configuration
+  isPublic: boolean("isPublic").default(false), // team-wide vs private
+  isFavorite: boolean("isFavorite").default(false),
+  scheduleFrequency: mysqlEnum("scheduleFrequency", ["None", "Daily", "Weekly", "Monthly"]),
+  scheduleDay: int("scheduleDay"), // day of week (1-7) or day of month (1-31)
+  scheduleTime: varchar("scheduleTime", { length: 10 }), // "09:00"
+  lastRunAt: timestamp("lastRunAt"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  createdByIdx: index("created_by_idx").on(table.createdBy),
+  typeIdx: index("type_idx").on(table.reportType),
+}));
+
+export type SavedReport = typeof savedReports.$inferSelect;
+export type InsertSavedReport = typeof savedReports.$inferInsert;
+
+/**
+ * Report Execution History - Track when reports were run
+ */
+export const reportExecutions = mysqlTable("reportExecutions", {
+  id: int("id").autoincrement().primaryKey(),
+  reportId: int("reportId").notNull(),
+  executedBy: int("executedBy").notNull(),
+  executedAt: timestamp("executedAt").defaultNow().notNull(),
+  rowCount: int("rowCount"),
+  executionTimeMs: int("executionTimeMs"),
+  parameters: json("parameters"), // Runtime parameters
+  status: mysqlEnum("status", ["Success", "Failed", "Timeout"]).notNull(),
+  errorMessage: text("errorMessage"),
+}, (table) => ({
+  reportIdx: index("report_idx").on(table.reportId),
+  executedByIdx: index("executed_by_idx").on(table.executedBy),
+}));
+
+export type ReportExecution = typeof reportExecutions.$inferSelect;
+export type InsertReportExecution = typeof reportExecutions.$inferInsert;

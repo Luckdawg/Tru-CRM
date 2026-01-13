@@ -574,3 +574,45 @@
 - [x] Highlight low-engagement accounts requiring attention
 - [x] Track last activity date for each account
 - [x] Add engagement page to navigation
+
+
+## Reports Module - Phase 5
+
+### Pre-built Reports
+- [x] Forecast Accuracy Tracking report
+  - [ ] Compare forecasted vs actual closed deals by month/quarter
+  - [ ] Show accuracy percentage by stage
+  - [ ] Track probability weight effectiveness
+  - [ ] Identify patterns in forecast misses
+  - [ ] Suggest probability weight adjustments
+
+### Custom Report Builder
+- [x] Create drag-and-drop query builder interface
+- [x] Support cross-module queries (Accounts + Opportunities + Engagement)
+- [x] Add filter conditions (>, <, =, contains, date ranges)
+- [x] Add field selection (choose which columns to display)
+- [x] Add sorting and grouping options
+- [x] Preview results before saving
+- [x] Export results to CSV
+
+### Saved Report Templates
+- [x] Create database schema for saved reports
+- [x] Implement save/load/delete report templates
+- [x] Add report sharing (private vs team-wide)
+- [x] Add report scheduling (daily/weekly/monthly)
+- [ ] Add report favorites/pinning
+
+### Reports Page
+- [x] Create Reports navigation tab
+- [x] Build report list view with categories
+- [x] Add "Run Report" interface with parameters
+- [x] Show report execution history
+- [x] Display results in data table with export
+- [x] Add report builder UI
+
+### Testing
+- [x] Write unit tests for forecast accuracy calculations (17/17 passing)
+- [x] Write unit tests for custom query builder
+- [x] Write unit tests for saved report templates
+- [ ] Test complex cross-module queries
+- [ ] Test report scheduling functionality

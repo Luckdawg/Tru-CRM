@@ -50,6 +50,13 @@
       "when": 1768261541947,
       "tag": "0006_first_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1768327459006,
+      "tag": "0007_loose_carnage",
+      "breakpoints": true
     }
   ]
 }

@@ -703,7 +703,7 @@ export const appRouter = router({
     }),
   }),
 
-  reports: router({
+  basicReports: router({
     opportunitiesByCloseDate: protectedProcedure.query(async () => {
       return await db.getOpportunitiesByCloseDate();
     }),
@@ -1154,6 +1154,125 @@ export const appRouter = router({
       .input(z.object({ ownerId: z.number().optional() }).optional())
       .query(async ({ input }) => {
         return await db.getAllAccountEngagementScores(input?.ownerId);
+      }),
+  }),
+
+  // Forecast Tracking procedures
+  forecast: router({
+    createSnapshot: protectedProcedure
+      .input(z.object({
+        periodType: z.enum(['Month', 'Quarter', 'Year']),
+        periodStart: z.date(),
+        periodEnd: z.date(),
+        ownerId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createForecastSnapshot(input);
+      }),
+
+    getAccuracy: protectedProcedure
+      .input(z.object({
+        periodType: z.enum(['Month', 'Quarter', 'Year']),
+        periodStart: z.date(),
+        periodEnd: z.date(),
+        ownerId: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        return await db.getForecastAccuracy(input);
+      }),
+
+    getAllSnapshots: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getAllForecastSnapshots(input?.ownerId);
+      }),
+  }),
+
+  // Reports procedures
+  reports: router({
+    executeCustomReport: protectedProcedure
+      .input(z.object({
+        modules: z.array(z.string()),
+        fields: z.array(z.string()),
+        filters: z.array(z.object({
+          field: z.string(),
+          operator: z.string(),
+          value: z.any(),
+        })),
+        sorting: z.array(z.object({
+          field: z.string(),
+          direction: z.enum(['asc', 'desc']),
+        })).optional(),
+        groupBy: z.string().optional(),
+        limit: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const startTime = Date.now();
+        const results = await db.executeCustomReport(input);
+        const executionTime = Date.now() - startTime;
+        return { results, executionTime, rowCount: results.length };
+      }),
+
+    getAvailableFields: protectedProcedure
+      .query(async () => {
+        return db.getAvailableReportFields();
+      }),
+
+    saveReport: protectedProcedure
+      .input(z.object({
+        reportName: z.string(),
+        reportType: z.enum(['PreBuilt', 'Custom']),
+        category: z.string().optional(),
+        description: z.string().optional(),
+        queryConfig: z.any(),
+        columns: z.any(),
+        filters: z.any(),
+        sorting: z.any().optional(),
+        grouping: z.any().optional(),
+        isPublic: z.boolean().optional(),
+        isFavorite: z.boolean().optional(),
+        scheduleFrequency: z.enum(['None', 'Daily', 'Weekly', 'Monthly']).optional(),
+        scheduleDay: z.number().optional(),
+        scheduleTime: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.saveReportTemplate({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+      }),
+
+    getSavedReports: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getSavedReports(ctx.user.id);
+      }),
+
+    getSavedReport: protectedProcedure
+      .input(z.object({ reportId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSavedReport(input.reportId);
+      }),
+
+    deleteReport: protectedProcedure
+      .input(z.object({ reportId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.deleteSavedReport(input.reportId, ctx.user.id);
+      }),
+
+    logExecution: protectedProcedure
+      .input(z.object({
+        reportId: z.number(),
+        rowCount: z.number(),
+        executionTimeMs: z.number(),
+        parameters: z.any().optional(),
+        status: z.enum(['Success', 'Failed', 'Timeout']),
+        errorMessage: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.logReportExecution({
+          ...input,
+          executedBy: ctx.user.id,
+        });
       }),
   }),
 

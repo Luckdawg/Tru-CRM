@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, sql, like, not, gte, lte } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, like, not, gte, lte, inArray, notInArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -8,6 +8,10 @@ import {
   leads, 
   opportunities, 
   activities,
+  forecastSnapshots,
+  forecastSnapshotOpportunities,
+  savedReports,
+  reportExecutions,
   projects,
   milestones,
   winLossAnalysis,
@@ -1587,4 +1591,526 @@ export async function getAllAccountEngagementScores(ownerId?: number) {
 
   // Sort by engagement score descending
   return scores.sort((a, b) => (b?.engagementScore || 0) - (a?.engagementScore || 0));
+}
+
+/**
+ * ========================================
+ * FORECAST TRACKING & ACCURACY
+ * ========================================
+ */
+
+/**
+ * Create a forecast snapshot for a given period
+ */
+export async function createForecastSnapshot(params: {
+  periodType: 'Month' | 'Quarter' | 'Year';
+  periodStart: Date;
+  periodEnd: Date;
+  ownerId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { periodType, periodStart, periodEnd, ownerId } = params;
+
+  // Get all open opportunities in the period
+  const conditions = [
+    gte(opportunities.closeDate, periodStart),
+    lte(opportunities.closeDate, periodEnd),
+    notInArray(opportunities.stage, ['Closed Won', 'Closed Lost'])
+  ];
+
+  if (ownerId) {
+    conditions.push(eq(opportunities.ownerId, ownerId));
+  }
+
+  const opps = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    stage: opportunities.stage,
+    amount: opportunities.amount,
+    probability: opportunities.probability,
+    closeDate: opportunities.closeDate,
+    accountId: opportunities.accountId,
+  })
+    .from(opportunities)
+    .where(and(...conditions));
+
+  // Calculate totals
+  let forecastAmount = 0;
+  let weightedAmount = 0;
+
+  for (const opp of opps) {
+    const amount = parseFloat(opp.amount?.toString() || '0');
+    const probability = opp.probability || 0;
+    forecastAmount += amount;
+    weightedAmount += (amount * probability) / 100;
+  }
+
+  // Create snapshot
+  const [snapshot] = await db.insert(forecastSnapshots).values({
+    snapshotDate: new Date(),
+    periodType,
+    periodStart,
+    periodEnd,
+    forecastAmount: forecastAmount.toString(),
+    weightedAmount: weightedAmount.toString(),
+    opportunityCount: opps.length,
+    ownerId: ownerId || null,
+  });
+
+  const snapshotId = snapshot.insertId;
+
+  // Get account names for opportunities
+  const accountIds = opps.map(o => o.accountId).filter((id): id is number => id !== null);
+  const accountsData = accountIds.length > 0
+    ? await db.select({ id: accounts.id, accountName: accounts.accountName })
+        .from(accounts)
+        .where(inArray(accounts.id, accountIds))
+    : [];
+
+  const accountMap = new Map(accountsData.map(a => [a.id, a.accountName]));
+
+  // Store individual opportunities
+  if (opps.length > 0) {
+    await db.insert(forecastSnapshotOpportunities).values(
+      opps.map(opp => ({
+        snapshotId: Number(snapshotId),
+        opportunityId: opp.id,
+        opportunityName: opp.opportunityName,
+        stage: opp.stage,
+        amount: opp.amount?.toString() || '0',
+        probability: opp.probability || 0,
+        weightedAmount: ((parseFloat(opp.amount?.toString() || '0') * (opp.probability || 0)) / 100).toString(),
+        closeDate: opp.closeDate,
+        accountName: opp.accountId ? (accountMap.get(opp.accountId) || null) : null,
+      }))
+    );
+  }
+
+  return snapshotId;
+}
+
+/**
+ * Get forecast accuracy comparison
+ */
+export async function getForecastAccuracy(params: {
+  periodType: 'Month' | 'Quarter' | 'Year';
+  periodStart: Date;
+  periodEnd: Date;
+  ownerId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { periodType, periodStart, periodEnd, ownerId } = params;
+
+  // Get the most recent snapshot for this period
+  const snapshotConditions = [
+    eq(forecastSnapshots.periodType, periodType),
+    eq(forecastSnapshots.periodStart, periodStart),
+    eq(forecastSnapshots.periodEnd, periodEnd)
+  ];
+
+  if (ownerId) {
+    snapshotConditions.push(eq(forecastSnapshots.ownerId, ownerId));
+  } else {
+    snapshotConditions.push(isNull(forecastSnapshots.ownerId));
+  }
+
+  const snapshots = await db.select()
+    .from(forecastSnapshots)
+    .where(and(...snapshotConditions))
+    .orderBy(desc(forecastSnapshots.snapshotDate))
+    .limit(1);
+  if (snapshots.length === 0) {
+    return null;
+  }
+
+  const snapshot = snapshots[0];
+
+  // Get actual closed won deals in the period
+  const actualsConditions = [
+    gte(opportunities.closeDate, periodStart),
+    lte(opportunities.closeDate, periodEnd),
+    eq(opportunities.stage, 'Closed Won')
+  ];
+
+  if (ownerId) {
+    actualsConditions.push(eq(opportunities.ownerId, ownerId));
+  }
+
+  const actualDeals = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    amount: opportunities.amount,
+    stage: opportunities.stage,
+    closeDate: opportunities.closeDate,
+  })
+    .from(opportunities)
+    .where(and(...actualsConditions));
+
+  const actualAmount = actualDeals.reduce((sum, deal) => 
+    sum + parseFloat(deal.amount?.toString() || '0'), 0
+  );
+
+  const forecastedAmount = parseFloat(snapshot.forecastAmount?.toString() || '0');
+  const weightedForecast = parseFloat(snapshot.weightedAmount?.toString() || '0');
+
+  // Calculate accuracy
+  const forecastAccuracy = forecastedAmount > 0 
+    ? (actualAmount / forecastedAmount) * 100 
+    : 0;
+
+  const weightedAccuracy = weightedForecast > 0
+    ? (actualAmount / weightedForecast) * 100
+    : 0;
+
+  // Get snapshot opportunities for stage analysis
+  const snapshotOpps = await db.select()
+    .from(forecastSnapshotOpportunities)
+    .where(eq(forecastSnapshotOpportunities.snapshotId, snapshot.id));
+
+  // Calculate accuracy by stage
+  const stageAccuracy: Record<string, any> = {};
+  const stages = Array.from(new Set(snapshotOpps.map(o => o.stage)));
+
+  for (const stage of stages) {
+    const stageOpps = snapshotOpps.filter(o => o.stage === stage);
+    const stageForecast = stageOpps.reduce((sum, o) => 
+      sum + parseFloat(o.weightedAmount?.toString() || '0'), 0
+    );
+
+    // Find which of these actually closed
+    const stageOppIds = stageOpps.map(o => o.opportunityId);
+    const stageActuals = actualDeals.filter(d => stageOppIds.includes(d.id));
+    const stageActualAmount = stageActuals.reduce((sum, d) => 
+      sum + parseFloat(d.amount?.toString() || '0'), 0
+    );
+
+    stageAccuracy[stage] = {
+      forecasted: stageForecast,
+      actual: stageActualAmount,
+      accuracy: stageForecast > 0 ? (stageActualAmount / stageForecast) * 100 : 0,
+      opportunityCount: stageOpps.length,
+      closedCount: stageActuals.length,
+      closeRate: stageOpps.length > 0 ? (stageActuals.length / stageOpps.length) * 100 : 0,
+    };
+  }
+
+  return {
+    snapshot: {
+      id: snapshot.id,
+      snapshotDate: snapshot.snapshotDate,
+      periodType: snapshot.periodType,
+      periodStart: snapshot.periodStart,
+      periodEnd: snapshot.periodEnd,
+      forecastAmount: forecastedAmount,
+      weightedAmount: weightedForecast,
+      opportunityCount: snapshot.opportunityCount,
+    },
+    actuals: {
+      amount: actualAmount,
+      dealCount: actualDeals.length,
+      deals: actualDeals,
+    },
+    accuracy: {
+      forecastAccuracy: forecastAccuracy,
+      weightedAccuracy: weightedAccuracy,
+      variance: actualAmount - forecastedAmount,
+      weightedVariance: actualAmount - weightedForecast,
+    },
+    stageAccuracy,
+  };
+}
+
+/**
+ * Get all forecast snapshots
+ */
+export async function getAllForecastSnapshots(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select()
+    .from(forecastSnapshots)
+    .orderBy(desc(forecastSnapshots.snapshotDate));
+
+  if (ownerId) {
+    query = query.where(eq(forecastSnapshots.ownerId, ownerId)) as any;
+  }
+
+  return await query;
+}
+
+/**
+ * ========================================
+ * CUSTOM REPORT BUILDER
+ * ========================================
+ */
+
+/**
+ * Execute a custom report query
+ */
+export async function executeCustomReport(config: {
+  modules: string[]; // ['accounts', 'opportunities', 'engagement']
+  fields: string[]; // ['accountName', 'opportunityName', 'engagementScore']
+  filters: Array<{
+    field: string;
+    operator: string; // '>', '<', '=', 'contains', 'between'
+    value: any;
+  }>;
+  sorting?: { field: string; direction: 'asc' | 'desc' }[];
+  groupBy?: string;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { modules, fields, filters, sorting, groupBy, limit = 1000 } = config;
+
+  // Build a dynamic query based on modules
+  // For simplicity, we'll support common cross-module queries
+
+  // Example: Accounts with Opportunities and Engagement
+  if (modules.includes('accounts') && modules.includes('opportunities') && modules.includes('engagement')) {
+    // Get all accounts with their opportunities
+    const accountsData = await db.select({
+      accountId: accounts.id,
+      accountName: accounts.accountName,
+      industry: accounts.industry,
+      region: accounts.region,
+      vertical: accounts.vertical,
+    }).from(accounts);
+
+    // Get opportunities for these accounts
+    const oppsData = await db.select({
+      id: opportunities.id,
+      accountId: opportunities.accountId,
+      opportunityName: opportunities.opportunityName,
+      stage: opportunities.stage,
+      amount: opportunities.amount,
+      probability: opportunities.probability,
+      closeDate: opportunities.closeDate,
+    }).from(opportunities);
+
+    // Build results
+    const results = [];
+    for (const account of accountsData) {
+      const accountOpps = oppsData.filter(o => o.accountId === account.accountId);
+      const pipelineValue = accountOpps
+        .filter(o => !['Closed Won', 'Closed Lost'].includes(o.stage))
+        .reduce((sum, o) => sum + parseFloat(o.amount?.toString() || '0'), 0);
+
+      // Get engagement score
+      const engagementData = await getAccountEngagementScore(account.accountId);
+
+      const row: any = {
+        accountId: account.accountId,
+        accountName: account.accountName,
+        industry: account.industry,
+        region: account.region,
+        vertical: account.vertical,
+        opportunityCount: accountOpps.length,
+        pipelineValue,
+        engagementScore: engagementData?.engagementScore || 0,
+        engagementLevel: engagementData?.engagementLevel || 'Low',
+      };
+
+      // Apply filters
+      let passesFilters = true;
+      for (const filter of filters) {
+        const fieldValue = row[filter.field];
+        switch (filter.operator) {
+          case '>':
+            if (!(fieldValue > filter.value)) passesFilters = false;
+            break;
+          case '<':
+            if (!(fieldValue < filter.value)) passesFilters = false;
+            break;
+          case '=':
+            if (fieldValue !== filter.value) passesFilters = false;
+            break;
+          case '>=':
+            if (!(fieldValue >= filter.value)) passesFilters = false;
+            break;
+          case '<=':
+            if (!(fieldValue <= filter.value)) passesFilters = false;
+            break;
+          case 'contains':
+            if (!String(fieldValue).toLowerCase().includes(String(filter.value).toLowerCase())) {
+              passesFilters = false;
+            }
+            break;
+        }
+      }
+
+      if (passesFilters) {
+        results.push(row);
+      }
+    }
+
+    // Apply sorting
+    if (sorting && sorting.length > 0) {
+      results.sort((a, b) => {
+        for (const sort of sorting) {
+          const aVal = a[sort.field];
+          const bVal = b[sort.field];
+          if (aVal < bVal) return sort.direction === 'asc' ? -1 : 1;
+          if (aVal > bVal) return sort.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return results.slice(0, limit);
+  }
+
+  // Add more module combinations as needed
+  return [];
+}
+
+/**
+ * Get available fields for report builder
+ */
+export function getAvailableReportFields() {
+  return {
+    accounts: [
+      { field: 'accountId', label: 'Account ID', type: 'number' },
+      { field: 'accountName', label: 'Account Name', type: 'string' },
+      { field: 'industry', label: 'Industry', type: 'string' },
+      { field: 'region', label: 'Region', type: 'string' },
+      { field: 'vertical', label: 'Vertical', type: 'string' },
+    ],
+    opportunities: [
+      { field: 'opportunityCount', label: 'Opportunity Count', type: 'number' },
+      { field: 'pipelineValue', label: 'Pipeline Value', type: 'number' },
+      { field: 'stage', label: 'Stage', type: 'string' },
+      { field: 'amount', label: 'Amount', type: 'number' },
+      { field: 'probability', label: 'Probability', type: 'number' },
+    ],
+    engagement: [
+      { field: 'engagementScore', label: 'Engagement Score', type: 'number' },
+      { field: 'engagementLevel', label: 'Engagement Level', type: 'string' },
+      { field: 'activityCount', label: 'Activity Count', type: 'number' },
+    ],
+  };
+}
+
+/**
+ * Save a custom report template
+ */
+export async function saveReportTemplate(params: {
+  reportName: string;
+  reportType: 'PreBuilt' | 'Custom';
+  category?: string;
+  description?: string;
+  queryConfig: any;
+  columns: any;
+  filters: any;
+  sorting?: any;
+  grouping?: any;
+  isPublic?: boolean;
+  isFavorite?: boolean;
+  scheduleFrequency?: 'None' | 'Daily' | 'Weekly' | 'Monthly';
+  scheduleDay?: number;
+  scheduleTime?: string;
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(savedReports).values({
+    reportName: params.reportName,
+    reportType: params.reportType,
+    category: params.category || null,
+    description: params.description || null,
+    queryConfig: params.queryConfig,
+    columns: params.columns,
+    filters: params.filters,
+    sorting: params.sorting || null,
+    grouping: params.grouping || null,
+    isPublic: params.isPublic || false,
+    isFavorite: params.isFavorite || false,
+    scheduleFrequency: params.scheduleFrequency || 'None',
+    scheduleDay: params.scheduleDay || null,
+    scheduleTime: params.scheduleTime || null,
+    createdBy: params.createdBy,
+  });
+
+  return result.insertId;
+}
+
+/**
+ * Get all saved reports
+ */
+export async function getSavedReports(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(savedReports)
+    .where(or(
+      eq(savedReports.createdBy, userId),
+      eq(savedReports.isPublic, true)
+    ))
+    .orderBy(desc(savedReports.createdAt));
+}
+
+/**
+ * Get a specific saved report
+ */
+export async function getSavedReport(reportId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const reports = await db.select()
+    .from(savedReports)
+    .where(eq(savedReports.id, reportId))
+    .limit(1);
+
+  return reports.length > 0 ? reports[0] : null;
+}
+
+/**
+ * Delete a saved report
+ */
+export async function deleteSavedReport(reportId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  await db.delete(savedReports)
+    .where(and(
+      eq(savedReports.id, reportId),
+      eq(savedReports.createdBy, userId)
+    ));
+
+  return true;
+}
+
+/**
+ * Log report execution
+ */
+export async function logReportExecution(params: {
+  reportId: number;
+  executedBy: number;
+  rowCount: number;
+  executionTimeMs: number;
+  parameters?: any;
+  status: 'Success' | 'Failed' | 'Timeout';
+  errorMessage?: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(reportExecutions).values({
+    reportId: params.reportId,
+    executedBy: params.executedBy,
+    rowCount: params.rowCount,
+    executionTimeMs: params.executionTimeMs,
+    parameters: params.parameters || null,
+    status: params.status,
+    errorMessage: params.errorMessage || null,
+  });
+
+  return result.insertId;
 }
