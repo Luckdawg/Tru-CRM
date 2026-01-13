@@ -1776,7 +1776,9 @@ export async function getForecastAccuracy(params: {
 
   // Calculate accuracy by stage
   const stageAccuracy: Record<string, any> = {};
-  const stages = Array.from(new Set(snapshotOpps.map(o => o.stage)));
+  const stages = snapshotOpps && snapshotOpps.length > 0 
+    ? Array.from(new Set(snapshotOpps.map(o => o.stage))) 
+    : [];
 
   for (const stage of stages) {
     const stageOpps = snapshotOpps.filter(o => o.stage === stage);
@@ -2449,23 +2451,33 @@ export async function getForecastAccuracyTrendWidget(userId?: number) {
     .where(and(...conditions))
     .orderBy(asc(forecastSnapshots.periodStart));
 
+  // Return empty array if no snapshots exist
+  if (snapshots.length === 0) {
+    return [];
+  }
+
   // Calculate accuracy for each
   const trend = [];
   for (const snapshot of snapshots) {
-    const accuracy = await getForecastAccuracy({
-      periodType: 'Month',
-      periodStart: new Date(snapshot.periodStart),
-      periodEnd: new Date(snapshot.periodEnd),
-      ownerId: userId,
-    });
-
-    if (accuracy) {
-      trend.push({
-        month: new Date(snapshot.periodStart).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        forecastAmount: parseFloat(snapshot.forecastAmount.toString()),
-        actualAmount: accuracy.actuals.actualAmount,
-        accuracy: accuracy.accuracy.forecastAccuracy,
+    try {
+      const accuracy = await getForecastAccuracy({
+        periodType: 'Month',
+        periodStart: new Date(snapshot.periodStart),
+        periodEnd: new Date(snapshot.periodEnd),
+        ownerId: userId,
       });
+
+      if (accuracy) {
+        trend.push({
+          month: new Date(snapshot.periodStart).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          forecastAmount: parseFloat(snapshot.forecastAmount.toString()),
+          actualAmount: accuracy.actuals.actualAmount,
+          accuracy: accuracy.accuracy.forecastAccuracy,
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating forecast accuracy for snapshot:', error);
+      // Continue to next snapshot
     }
   }
 
