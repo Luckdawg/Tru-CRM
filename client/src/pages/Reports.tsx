@@ -24,6 +24,18 @@ export default function Reports() {
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [filters, setFilters] = useState<Array<{ field: string; operator: string; value: string }>>([]);
   const [newFilter, setNewFilter] = useState({ field: "", operator: ">", value: "" });
+  const [showPresets, setShowPresets] = useState(false);
+
+  const { data: filterPresets, refetch: refetchPresets } = trpc.filterPresets.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const createSystemPresetsMutation = trpc.filterPresets.createSystemPresets.useMutation({
+    onSuccess: () => {
+      toast.success("System presets created");
+      refetchPresets();
+    },
+  });
 
   const { data: savedReports, refetch: refetchReports } = trpc.reports.getSavedReports.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -68,6 +80,12 @@ export default function Reports() {
       setFilters([...filters, newFilter]);
       setNewFilter({ field: "", operator: ">", value: "" });
     }
+  };
+
+  const handleLoadPreset = (preset: any) => {
+    setFilters(preset.filters || []);
+    toast.success(`Loaded preset: ${preset.presetName}`);
+    setShowPresets(false);
   };
 
   const handleRemoveFilter = (index: number) => {
@@ -269,7 +287,52 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* Custom Report Builder Dialog */}
+        {/* Filter Presets */}
+        <Card className="mt-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Filter Presets</CardTitle>
+                <CardDescription>Common filter combinations for quick reporting</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => createSystemPresetsMutation.mutate()}>
+                Initialize System Presets
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filterPresets && filterPresets.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filterPresets.map((preset: any) => (
+                  <Card key={preset.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-base">{preset.presetName}</CardTitle>
+                          <CardDescription className="text-sm">{preset.description}</CardDescription>
+                        </div>
+                        {preset.isSystem && <Badge variant="secondary">System</Badge>}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">{preset.category}</Badge>
+                        <Button variant="outline" size="sm" onClick={() => handleLoadPreset(preset)}>
+                          Load Filters
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No filter presets available. Click "Initialize System Presets" to create common filters.</p>
+            )}
+          </CardContent>
+        </Card>
+      </main>
+
+      {/* Custom Report Builder Dialog */}
         <Dialog open={showBuilder} onOpenChange={setShowBuilder}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -424,7 +487,6 @@ export default function Reports() {
             </div>
           </DialogContent>
         </Dialog>
-      </main>
     </div>
   );
 }

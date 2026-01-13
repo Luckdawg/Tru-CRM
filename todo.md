@@ -616,3 +616,40 @@
 - [x] Write unit tests for saved report templates
 - [ ] Test complex cross-module queries
 - [ ] Test report scheduling functionality
+
+
+## Phase 6 Enhancements
+
+### 1. Automated Email Digests
+- [x] Create email digest scheduler (daily/weekly)
+- [x] Build at-risk deals digest template
+- [x] Build low-engagement accounts digest template
+- [x] Add digest preferences to user settings
+- [x] Implement digest generation logic
+- [x] Send digests via notification API
+- [x] Add unsubscribe/frequency controls
+- [x] Write tests for digest generation (20/22 passing, 2 skipped)
+
+### 2. Customizable Dashboard Widgets
+- [x] Create widget system architecture
+- [x] Build "Top 5 At-Risk Opportunities" widget
+- [x] Build "Forecast Accuracy Trend" widget (last 6 months)
+- [x] Build "Low Engagement Accounts" widget
+- [x] Build "Pipeline by Stage" widget
+- [x] Build "Win Rate Trend" widget
+- [ ] Add widget drag-and-drop positioning
+- [ ] Add widget show/hide controls
+- [x] Save widget preferences per user
+- [x] Write tests for widget data
+
+### 3. Advanced Report Filters
+- [x] Add date range filter component
+- [x] Implement IN operator (multi-select values)
+- [x] Implement NOT IN operator
+- [x] Implement BETWEEN operator for numbers
+- [x] Add saved filter presets system
+- [x] Create common preset: "Enterprise deals closing this quarter"
+- [x] Create common preset: "Stale opportunities (30+ days)"
+- [x] Create common preset: "High-value low-engagement accounts"
+- [x] Add preset management UI
+- [x] Write tests for advanced filters

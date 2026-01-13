@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { BarChart3, Building2, DollarSign, TrendingUp, Users, FileText, Briefcase, AlertTriangle, AlertCircle } from "lucide-react";
+import { BarChart3, Building2, DollarSign, TrendingUp, Users, FileText, Briefcase, AlertTriangle, AlertCircle, Activity } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Dashboard() {
@@ -18,6 +18,17 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
   const { data: avgDealSize } = trpc.dashboard.averageDealSize.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  // Widget data
+  const { data: topAtRiskOpps } = trpc.widgets.topAtRiskOpportunities.useQuery({ limit: 5 }, {
+    enabled: isAuthenticated,
+  });
+  const { data: lowEngagementAccounts } = trpc.widgets.lowEngagementAccounts.useQuery({ limit: 5 }, {
+    enabled: isAuthenticated,
+  });
+  const { data: winRateTrend } = trpc.widgets.winRateTrend.useQuery(undefined, {
     enabled: isAuthenticated,
   });
   const { data: projects } = trpc.projects.list.useQuery(undefined, {
@@ -224,6 +235,118 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
+        </div>
+
+        {/* Dashboard Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Top At-Risk Opportunities Widget */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>At-Risk Opportunities</CardTitle>
+                  <CardDescription>Deals requiring immediate attention</CardDescription>
+                </div>
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {topAtRiskOpps && topAtRiskOpps.length > 0 ? (
+                <div className="space-y-3">
+                  {topAtRiskOpps.map((opp: any) => (
+                    <Link key={opp.id} href={`/opportunities/${opp.id}`}>
+                      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <p className="font-medium">{opp.opportunityName}</p>
+                          <p className="text-sm text-muted-foreground">{opp.accountName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${opp.amount ? parseFloat(opp.amount.toString()).toLocaleString() : '0'}</p>
+                          <p className="text-xs text-red-600">Health: {opp.healthScore || 0}/100</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No at-risk opportunities</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Low Engagement Accounts Widget */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Low Engagement Accounts</CardTitle>
+                  <CardDescription>Accounts needing attention</CardDescription>
+                </div>
+                <Activity className="h-5 w-5 text-yellow-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {lowEngagementAccounts && lowEngagementAccounts.length > 0 ? (
+                <div className="space-y-3">
+                  {lowEngagementAccounts.map((account: any) => (
+                    <Link key={account.id} href={`/accounts/${account.id}`}>
+                      <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <p className="font-medium">{account.accountName}</p>
+                          <p className="text-sm text-muted-foreground">{account.industry || 'N/A'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{account.engagementScore}/100</p>
+                          <p className="text-xs text-yellow-600">{account.daysSinceLastActivity} days</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">All accounts engaged</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Win Rate Trend Widget */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Win Rate Trend</CardTitle>
+                  <CardDescription>Last 6 months performance</CardDescription>
+                </div>
+                <TrendingUp className="h-5 w-5 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {winRateTrend && winRateTrend.length > 0 ? (
+                <div className="space-y-2">
+                  {winRateTrend.map((trend: any, index: number) => (
+                    <div key={index} className="flex items-center gap-4">
+                      <span className="text-sm font-medium w-24">{trend.month}</span>
+                      <div className="flex-1">
+                        <div className="h-8 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-600 flex items-center justify-end pr-2"
+                            style={{ width: `${trend.winRate}%` }}
+                          >
+                            <span className="text-xs text-white font-medium">{trend.winRate}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground w-24 text-right">
+                        {trend.won}W / {trend.lost}L
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No data available</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}

@@ -12,6 +12,9 @@ import {
   forecastSnapshotOpportunities,
   savedReports,
   reportExecutions,
+  userPreferences,
+  emailDigests,
+  filterPresets,
   projects,
   milestones,
   winLossAnalysis,
@@ -1941,6 +1944,24 @@ export async function executeCustomReport(config: {
               passesFilters = false;
             }
             break;
+          case 'in':
+            if (!Array.isArray(filter.value) || !filter.value.includes(fieldValue)) {
+              passesFilters = false;
+            }
+            break;
+          case 'not_in':
+            if (Array.isArray(filter.value) && filter.value.includes(fieldValue)) {
+              passesFilters = false;
+            }
+            break;
+          case 'between':
+            if (filter.value.start && filter.value.end) {
+              const val = typeof fieldValue === 'number' ? fieldValue : new Date(fieldValue).getTime();
+              const start = typeof filter.value.start === 'number' ? filter.value.start : new Date(filter.value.start).getTime();
+              const end = typeof filter.value.end === 'number' ? filter.value.end : new Date(filter.value.end).getTime();
+              if (!(val >= start && val <= end)) passesFilters = false;
+            }
+            break;
         }
       }
 
@@ -2113,4 +2134,597 @@ export async function logReportExecution(params: {
   });
 
   return result.insertId;
+}
+
+/**
+ * ========================================
+ * EMAIL DIGEST SYSTEM
+ * ========================================
+ */
+
+/**
+ * Get user preferences
+ */
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const prefs = await db.select()
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, userId))
+    .limit(1);
+
+  return prefs.length > 0 ? prefs[0] : null;
+}
+
+/**
+ * Create or update user preferences
+ */
+export async function upsertUserPreferences(params: {
+  userId: number;
+  dashboardWidgets?: any;
+  digestEnabled?: boolean;
+  digestFrequency?: 'None' | 'Daily' | 'Weekly';
+  digestDay?: number;
+  digestTime?: string;
+  includeAtRiskDeals?: boolean;
+  includeLowEngagement?: boolean;
+  includeForecastSummary?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Check if preferences exist
+  const existing = await getUserPreferences(params.userId);
+
+  if (existing) {
+    // Update
+    await db.update(userPreferences)
+      .set({
+        dashboardWidgets: params.dashboardWidgets ?? existing.dashboardWidgets,
+        digestEnabled: params.digestEnabled ?? existing.digestEnabled,
+        digestFrequency: params.digestFrequency ?? existing.digestFrequency,
+        digestDay: params.digestDay ?? existing.digestDay,
+        digestTime: params.digestTime ?? existing.digestTime,
+        includeAtRiskDeals: params.includeAtRiskDeals ?? existing.includeAtRiskDeals,
+        includeLowEngagement: params.includeLowEngagement ?? existing.includeLowEngagement,
+        includeForecastSummary: params.includeForecastSummary ?? existing.includeForecastSummary,
+      })
+      .where(eq(userPreferences.userId, params.userId));
+
+    return existing.id;
+  } else {
+    // Insert
+    const [result] = await db.insert(userPreferences).values({
+      userId: params.userId,
+      dashboardWidgets: params.dashboardWidgets || null,
+      digestEnabled: params.digestEnabled ?? true,
+      digestFrequency: params.digestFrequency ?? 'Weekly',
+      digestDay: params.digestDay ?? 1, // Monday
+      digestTime: params.digestTime ?? '09:00',
+      includeAtRiskDeals: params.includeAtRiskDeals ?? true,
+      includeLowEngagement: params.includeLowEngagement ?? true,
+      includeForecastSummary: params.includeForecastSummary ?? false,
+    });
+
+    return result.insertId;
+  }
+}
+
+/**
+ * Get at-risk deals for digest
+ */
+export async function getAtRiskDealsForDigest(userId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    notInArray(opportunities.stage, ['Closed Won', 'Closed Lost']),
+  ];
+
+  if (userId) {
+    conditions.push(eq(opportunities.ownerId, userId));
+  }
+
+  const opps = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    accountId: opportunities.accountId,
+    stage: opportunities.stage,
+    amount: opportunities.amount,
+    closeDate: opportunities.closeDate,
+    healthScore: opportunities.healthScore,
+    lastActivityDate: opportunities.lastActivityDate,
+    nextSteps: opportunities.nextSteps,
+  })
+    .from(opportunities)
+    .where(and(...conditions))
+    .orderBy(asc(opportunities.healthScore));
+
+  // Filter for at-risk (health score < 40 or stale)
+  const now = new Date();
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  const atRisk = opps.filter(opp => {
+    const healthScore = opp.healthScore || 0;
+    const lastActivity = opp.lastActivityDate ? new Date(opp.lastActivityDate) : null;
+    const isStale = !lastActivity || lastActivity < fourteenDaysAgo;
+    
+    return healthScore < 40 || isStale;
+  });
+
+  // Get account names
+  if (atRisk.length > 0) {
+    const accountIds = atRisk.map(o => o.accountId).filter((id): id is number => id !== null);
+    const accountsData = accountIds.length > 0
+      ? await db.select({ id: accounts.id, accountName: accounts.accountName })
+          .from(accounts)
+          .where(inArray(accounts.id, accountIds))
+      : [];
+
+    const accountMap = new Map(accountsData.map(a => [a.id, a.accountName]));
+
+    return atRisk.map(opp => ({
+      ...opp,
+      accountName: opp.accountId ? (accountMap.get(opp.accountId) || 'Unknown') : 'Unknown',
+    }));
+  }
+
+  return [];
+}
+
+/**
+ * Get low-engagement accounts for digest
+ */
+export async function getLowEngagementAccountsForDigest(userId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get all accounts
+  const accountsData = await db.select({
+    id: accounts.id,
+    accountName: accounts.accountName,
+    industry: accounts.industry,
+    region: accounts.region,
+  }).from(accounts);
+
+  // Calculate engagement for each
+  const results = [];
+  for (const account of accountsData) {
+    const engagement = await getAccountEngagementScore(account.id);
+    if (engagement && engagement.engagementScore < 40) {
+      results.push({
+        ...account,
+        engagementScore: engagement.engagementScore,
+        engagementLevel: engagement.engagementLevel,
+        activityCount: engagement.activityCount,
+        daysSinceLastActivity: engagement.daysSinceLastActivity,
+      });
+    }
+  }
+
+  // Sort by engagement score ascending (worst first)
+  results.sort((a, b) => a.engagementScore - b.engagementScore);
+
+  return results.slice(0, 10); // Top 10 worst
+}
+
+/**
+ * Log email digest
+ */
+export async function logEmailDigest(params: {
+  userId: number;
+  digestType: 'AtRiskDeals' | 'LowEngagement' | 'Combined';
+  itemCount: number;
+  status: 'Sent' | 'Failed' | 'Skipped';
+  errorMessage?: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(emailDigests).values({
+    userId: params.userId,
+    digestType: params.digestType,
+    itemCount: params.itemCount,
+    status: params.status,
+    errorMessage: params.errorMessage || null,
+  });
+
+  return result.insertId;
+}
+
+/**
+ * Get users who should receive digest now
+ */
+export async function getUsersForDigest(frequency: 'Daily' | 'Weekly', currentDay: number, currentHour: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    eq(userPreferences.digestEnabled, true),
+    eq(userPreferences.digestFrequency, frequency),
+  ];
+
+  if (frequency === 'Weekly') {
+    conditions.push(eq(userPreferences.digestDay, currentDay));
+  }
+
+  const prefs = await db.select({
+    userId: userPreferences.userId,
+    digestTime: userPreferences.digestTime,
+    includeAtRiskDeals: userPreferences.includeAtRiskDeals,
+    includeLowEngagement: userPreferences.includeLowEngagement,
+    includeForecastSummary: userPreferences.includeForecastSummary,
+  })
+    .from(userPreferences)
+    .where(and(...conditions));
+
+  // Filter by time (within current hour)
+  return prefs.filter(pref => {
+    const [hour] = pref.digestTime?.split(':').map(Number) || [9];
+    return hour === currentHour;
+  });
+}
+
+/**
+ * ========================================
+ * DASHBOARD WIDGETS
+ * ========================================
+ */
+
+/**
+ * Get top at-risk opportunities widget data
+ */
+export async function getTopAtRiskOpportunitiesWidget(userId?: number, limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    notInArray(opportunities.stage, ['Closed Won', 'Closed Lost']),
+  ];
+
+  if (userId) {
+    conditions.push(eq(opportunities.ownerId, userId));
+  }
+
+  const opps = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    accountId: opportunities.accountId,
+    stage: opportunities.stage,
+    amount: opportunities.amount,
+    closeDate: opportunities.closeDate,
+    healthScore: opportunities.healthScore,
+    lastActivityDate: opportunities.lastActivityDate,
+  })
+    .from(opportunities)
+    .where(and(...conditions))
+    .orderBy(asc(opportunities.healthScore))
+    .limit(limit);
+
+  // Get account names
+  if (opps.length > 0) {
+    const accountIds = opps.map(o => o.accountId).filter((id): id is number => id !== null);
+    const accountsData = accountIds.length > 0
+      ? await db.select({ id: accounts.id, accountName: accounts.accountName })
+          .from(accounts)
+          .where(inArray(accounts.id, accountIds))
+      : [];
+
+    const accountMap = new Map(accountsData.map(a => [a.id, a.accountName]));
+
+    return opps.map(opp => ({
+      ...opp,
+      accountName: opp.accountId ? (accountMap.get(opp.accountId) || 'Unknown') : 'Unknown',
+    }));
+  }
+
+  return [];
+}
+
+/**
+ * Get forecast accuracy trend widget data (last 6 months)
+ */
+export async function getForecastAccuracyTrendWidget(userId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get last 6 months of snapshots
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  const conditions = [
+    gte(forecastSnapshots.snapshotDate, sixMonthsAgo),
+    eq(forecastSnapshots.periodType, 'Month'),
+  ];
+
+  if (userId) {
+    conditions.push(eq(forecastSnapshots.ownerId, userId));
+  } else {
+    conditions.push(isNull(forecastSnapshots.ownerId));
+  }
+
+  const snapshots = await db.select()
+    .from(forecastSnapshots)
+    .where(and(...conditions))
+    .orderBy(asc(forecastSnapshots.periodStart));
+
+  // Calculate accuracy for each
+  const trend = [];
+  for (const snapshot of snapshots) {
+    const accuracy = await getForecastAccuracy({
+      periodType: 'Month',
+      periodStart: new Date(snapshot.periodStart),
+      periodEnd: new Date(snapshot.periodEnd),
+      ownerId: userId,
+    });
+
+    if (accuracy) {
+      trend.push({
+        month: new Date(snapshot.periodStart).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        forecastAmount: parseFloat(snapshot.forecastAmount.toString()),
+        actualAmount: accuracy.actuals.actualAmount,
+        accuracy: accuracy.accuracy.forecastAccuracy,
+      });
+    }
+  }
+
+  return trend;
+}
+
+/**
+ * Get low engagement accounts widget data
+ */
+export async function getLowEngagementAccountsWidget(userId?: number, limit: number = 5) {
+  return await getLowEngagementAccountsForDigest(userId);
+}
+
+/**
+ * Get pipeline by stage widget data
+ */
+export async function getPipelineByStageWidget(userId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    notInArray(opportunities.stage, ['Closed Won', 'Closed Lost']),
+  ];
+
+  if (userId) {
+    conditions.push(eq(opportunities.ownerId, userId));
+  }
+
+  const pipeline = await db.select({
+    stage: opportunities.stage,
+    count: sql<number>`count(*)`,
+    totalValue: sql<number>`sum(${opportunities.amount})`,
+  })
+    .from(opportunities)
+    .where(and(...conditions))
+    .groupBy(opportunities.stage);
+
+  return pipeline.map(p => ({
+    stage: p.stage,
+    count: Number(p.count),
+    totalValue: parseFloat(p.totalValue?.toString() || '0'),
+  }));
+}
+
+/**
+ * Get win rate trend widget data (last 6 months)
+ */
+export async function getWinRateTrendWidget(userId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const results = [];
+  
+  for (let i = 5; i >= 0; i--) {
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() - i);
+    endDate.setDate(1); // First of month
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    const conditions = [
+      gte(opportunities.closeDate, startDate),
+      lte(opportunities.closeDate, endDate),
+      inArray(opportunities.stage, ['Closed Won', 'Closed Lost']),
+    ];
+
+    if (userId) {
+      conditions.push(eq(opportunities.ownerId, userId));
+    }
+
+    const deals = await db.select({
+      stage: opportunities.stage,
+    })
+      .from(opportunities)
+      .where(and(...conditions));
+
+    const won = deals.filter(d => d.stage === 'Closed Won').length;
+    const total = deals.length;
+    const winRate = total > 0 ? (won / total) * 100 : 0;
+
+    results.push({
+      month: startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      winRate: Math.round(winRate),
+      won,
+      lost: total - won,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * ========================================
+ * FILTER PRESETS
+ * ========================================
+ */
+
+/**
+ * Create system filter presets
+ */
+export async function createSystemFilterPresets() {
+  const db = await getDb();
+  if (!db) return;
+
+  const systemPresets = [
+    {
+      presetName: "Enterprise deals closing this quarter",
+      description: "Opportunities over $500K closing in the current quarter",
+      category: "Opportunities",
+      filters: [
+        { field: "amount", operator: ">=", value: 500000 },
+        { field: "closeDate", operator: "between", value: { start: new Date(), end: new Date(new Date().setMonth(new Date().getMonth() + 3)) } },
+        { field: "stage", operator: "not_in", value: ["Closed Won", "Closed Lost"] },
+      ],
+      isSystem: true,
+      isPublic: true,
+      createdBy: 1, // System user
+    },
+    {
+      presetName: "Stale opportunities (30+ days)",
+      description: "Open opportunities with no activity in 30+ days",
+      category: "Opportunities",
+      filters: [
+        { field: "lastActivityDate", operator: "<", value: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        { field: "stage", operator: "not_in", value: ["Closed Won", "Closed Lost"] },
+      ],
+      isSystem: true,
+      isPublic: true,
+      createdBy: 1,
+    },
+    {
+      presetName: "High-value low-engagement accounts",
+      description: "Accounts with pipeline >$1M but engagement score <40",
+      category: "Accounts",
+      filters: [
+        { field: "pipelineValue", operator: ">", value: 1000000 },
+        { field: "engagementScore", operator: "<", value: 40 },
+      ],
+      isSystem: true,
+      isPublic: true,
+      createdBy: 1,
+    },
+    {
+      presetName: "At-risk deals closing this month",
+      description: "Deals with health score <40 closing within 30 days",
+      category: "Opportunities",
+      filters: [
+        { field: "healthScore", operator: "<", value: 40 },
+        { field: "closeDate", operator: "<=", value: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+        { field: "stage", operator: "not_in", value: ["Closed Won", "Closed Lost"] },
+      ],
+      isSystem: true,
+      isPublic: true,
+      createdBy: 1,
+    },
+    {
+      presetName: "Enterprise accounts in North America",
+      description: "Enterprise segment accounts in North America region",
+      category: "Accounts",
+      filters: [
+        { field: "vertical", operator: "=", value: "Enterprise" },
+        { field: "region", operator: "=", value: "North America" },
+      ],
+      isSystem: true,
+      isPublic: true,
+      createdBy: 1,
+    },
+  ];
+
+  // Check if presets already exist
+  const existing = await db.select()
+    .from(filterPresets)
+    .where(eq(filterPresets.isSystem, true))
+    .limit(1);
+
+  if (existing.length === 0) {
+    for (const preset of systemPresets) {
+      await db.insert(filterPresets).values(preset);
+    }
+    console.log('[FilterPresets] Created system filter presets');
+  }
+}
+
+/**
+ * Get all filter presets
+ */
+export async function getFilterPresets(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select()
+    .from(filterPresets)
+    .where(or(
+      eq(filterPresets.createdBy, userId),
+      eq(filterPresets.isPublic, true)
+    ))
+    .orderBy(desc(filterPresets.isSystem), desc(filterPresets.createdAt));
+}
+
+/**
+ * Get a specific filter preset
+ */
+export async function getFilterPreset(presetId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const presets = await db.select()
+    .from(filterPresets)
+    .where(eq(filterPresets.id, presetId))
+    .limit(1);
+
+  return presets.length > 0 ? presets[0] : null;
+}
+
+/**
+ * Save a filter preset
+ */
+export async function saveFilterPreset(params: {
+  presetName: string;
+  description?: string;
+  category: string;
+  filters: any;
+  isPublic?: boolean;
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [result] = await db.insert(filterPresets).values({
+    presetName: params.presetName,
+    description: params.description || null,
+    category: params.category,
+    filters: params.filters,
+    isSystem: false,
+    isPublic: params.isPublic || false,
+    createdBy: params.createdBy,
+  });
+
+  return result.insertId;
+}
+
+/**
+ * Delete a filter preset
+ */
+export async function deleteFilterPreset(presetId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  // Can't delete system presets
+  const preset = await getFilterPreset(presetId);
+  if (preset?.isSystem) {
+    return false;
+  }
+
+  await db.delete(filterPresets)
+    .where(and(
+      eq(filterPresets.id, presetId),
+      eq(filterPresets.createdBy, userId)
+    ));
+
+  return true;
 }

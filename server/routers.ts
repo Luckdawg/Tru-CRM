@@ -1276,6 +1276,122 @@ export const appRouter = router({
       }),
   }),
 
+  // User Preferences procedures
+  preferences: router({
+    get: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getUserPreferences(ctx.user.id);
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        dashboardWidgets: z.any().optional(),
+        digestEnabled: z.boolean().optional(),
+        digestFrequency: z.enum(['None', 'Daily', 'Weekly']).optional(),
+        digestDay: z.number().optional(),
+        digestTime: z.string().optional(),
+        includeAtRiskDeals: z.boolean().optional(),
+        includeLowEngagement: z.boolean().optional(),
+        includeForecastSummary: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.upsertUserPreferences({
+          userId: ctx.user.id,
+          ...input,
+        });
+      }),
+  }),
+
+  // Email Digest procedures
+  digest: router({
+    preview: protectedProcedure
+      .query(async ({ ctx }) => {
+        const atRiskDeals = await db.getAtRiskDealsForDigest(ctx.user.id);
+        const lowEngagement = await db.getLowEngagementAccountsForDigest(ctx.user.id);
+        return { atRiskDeals, lowEngagement };
+      }),
+
+    sendNow: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { generateAndSendDigest } = await import('./digestService');
+        return await generateAndSendDigest(
+          ctx.user.id,
+          ctx.user.name || 'User',
+          ctx.user.email || ''
+        );
+      }),
+  }),
+
+  // Dashboard Widgets procedures
+  widgets: router({
+    topAtRiskOpportunities: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        return await db.getTopAtRiskOpportunitiesWidget(ctx.user.id, input?.limit);
+      }),
+
+    forecastAccuracyTrend: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getForecastAccuracyTrendWidget(ctx.user.id);
+      }),
+
+    lowEngagementAccounts: protectedProcedure
+      .input(z.object({ limit: z.number().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        return await db.getLowEngagementAccountsWidget(ctx.user.id, input?.limit);
+      }),
+
+    pipelineByStage: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getPipelineByStageWidget(ctx.user.id);
+      }),
+
+    winRateTrend: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getWinRateTrendWidget(ctx.user.id);
+      }),
+  }),
+
+  // Filter Presets procedures
+  filterPresets: router({
+    list: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getFilterPresets(ctx.user.id);
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ presetId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getFilterPreset(input.presetId);
+      }),
+
+    save: protectedProcedure
+      .input(z.object({
+        presetName: z.string(),
+        description: z.string().optional(),
+        category: z.string(),
+        filters: z.any(),
+        isPublic: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.saveFilterPreset({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ presetId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.deleteFilterPreset(input.presetId, ctx.user.id);
+      }),
+
+    createSystemPresets: protectedProcedure
+      .mutation(async () => {
+        return await db.createSystemFilterPresets();
+      }),
+  }),
+
 });
 
 export type AppRouter = typeof appRouter;

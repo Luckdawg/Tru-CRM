@@ -568,3 +568,57 @@ export const reportExecutions = mysqlTable("reportExecutions", {
 
 export type ReportExecution = typeof reportExecutions.$inferSelect;
 export type InsertReportExecution = typeof reportExecutions.$inferInsert;
+
+/**
+ * User Preferences - Dashboard widgets and digest settings
+ */
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Dashboard widget preferences
+  dashboardWidgets: json("dashboardWidgets"), // Array of enabled widget IDs and positions
+  
+  // Email digest preferences
+  digestEnabled: boolean("digestEnabled").default(true).notNull(),
+  digestFrequency: mysqlEnum("digestFrequency", ["None", "Daily", "Weekly"]).default("Weekly").notNull(),
+  digestDay: int("digestDay"), // 0-6 for weekly (0=Sunday), null for daily
+  digestTime: varchar("digestTime", { length: 5 }).default("09:00"), // HH:MM format
+  
+  // Digest content preferences
+  includeAtRiskDeals: boolean("includeAtRiskDeals").default(true).notNull(),
+  includeLowEngagement: boolean("includeLowEngagement").default(true).notNull(),
+  includeForecastSummary: boolean("includeForecastSummary").default(false).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Email Digest Log - Track sent digests
+ */
+export const emailDigests = mysqlTable("emailDigests", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  digestType: mysqlEnum("digestType", ["AtRiskDeals", "LowEngagement", "Combined"]).notNull(),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  itemCount: int("itemCount").notNull(), // Number of items in digest
+  status: mysqlEnum("status", ["Sent", "Failed", "Skipped"]).notNull(),
+  errorMessage: text("errorMessage"),
+});
+
+/**
+ * Saved Filter Presets - Reusable report filters
+ */
+export const filterPresets = mysqlTable("filterPresets", {
+  id: int("id").autoincrement().primaryKey(),
+  presetName: varchar("presetName", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }), // e.g., "Opportunities", "Accounts"
+  filters: json("filters").notNull(), // Array of filter objects
+  isSystem: boolean("isSystem").default(false).notNull(), // System presets can't be deleted
+  isPublic: boolean("isPublic").default(false).notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
