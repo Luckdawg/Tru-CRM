@@ -1551,14 +1551,20 @@ export async function getAccountEngagementScore(accountId: number) {
     engagementLevel = 'Low';
   }
 
+  // Calculate days since last activity
+  const daysSinceLastActivity = recentActivities.length > 0 
+    ? Math.floor((Date.now() - recentActivities[0].activityDate.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
   return {
     accountId,
     engagementScore: score,
     engagementLevel,
     factors,
     activityCount,
-    activityTypes: Array.from(activityTypes),
+    activityTypes: activityTypes ? Array.from(activityTypes) : [],
     lastActivityDate: recentActivities.length > 0 ? recentActivities[0].activityDate : null,
+    daysSinceLastActivity,
   };
 }
 
