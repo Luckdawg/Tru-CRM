@@ -1019,6 +1019,50 @@ export const appRouter = router({
       }),
   }),
 
+  winLossAnalysis: {
+    create: protectedProcedure
+      .input(z.object({
+        opportunityId: z.number(),
+        outcome: z.enum(["Won", "Lost"]),
+        primaryReason: z.string().min(1, "Primary reason is required"),
+        competitorName: z.string().optional(),
+        dealSize: z.string().optional(),
+        customerFeedback: z.string().optional(),
+        lessonsLearned: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.createWinLossAnalysis(input);
+      }),
+
+    getByOpportunity: protectedProcedure
+      .input(z.object({ opportunityId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWinLossAnalysisByOpportunity(input.opportunityId);
+      }),
+
+    update: protectedProcedure
+      .input(z.object({
+        opportunityId: z.number(),
+        data: z.object({
+          primaryReason: z.string().optional(),
+          competitorName: z.string().optional(),
+          dealSize: z.string().optional(),
+          customerFeedback: z.string().optional(),
+          lessonsLearned: z.string().optional(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updateWinLossAnalysis(input.opportunityId, input.data);
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ opportunityId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteWinLossAnalysis(input.opportunityId);
+        return { success: true };
+      }),
+  },
+
 });
 
 export type AppRouter = typeof appRouter;

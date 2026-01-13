@@ -383,6 +383,27 @@ export type Milestone = typeof milestones.$inferSelect;
 export type InsertMilestone = typeof milestones.$inferInsert;
 
 /**
+ * Win/Loss Analysis - Capture reasons for closed opportunities
+ */
+export const winLossAnalysis = mysqlTable("winLossAnalysis", {
+  id: int("id").autoincrement().primaryKey(),
+  opportunityId: int("opportunityId").notNull().unique(),
+  outcome: mysqlEnum("outcome", ["Won", "Lost"]).notNull(),
+  primaryReason: varchar("primaryReason", { length: 100 }).notNull(),
+  competitorName: varchar("competitorName", { length: 255 }),
+  dealSize: decimal("dealSize", { precision: 15, scale: 2 }),
+  customerFeedback: text("customerFeedback"),
+  lessonsLearned: text("lessonsLearned"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  opportunityIdx: index("opportunity_idx").on(table.opportunityId),
+}));
+
+export type WinLossAnalysis = typeof winLossAnalysis.$inferSelect;
+export type InsertWinLossAnalysis = typeof winLossAnalysis.$inferInsert;
+
+/**
  * Cases - Support tickets
  */
 export const cases = mysqlTable("cases", {

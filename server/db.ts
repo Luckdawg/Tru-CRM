@@ -10,6 +10,7 @@ import {
   activities,
   projects,
   milestones,
+  winLossAnalysis,
   cases,
   products,
   lineItems,
@@ -21,6 +22,7 @@ import {
   InsertActivity,
   InsertProject,
   InsertMilestone,
+  InsertWinLossAnalysis,
   InsertCase,
   InsertProduct,
   InsertLineItem,
@@ -592,6 +594,45 @@ export async function toggleMilestoneComplete(id: number) {
     .where(eq(milestones.id, id));
   
   return await getMilestoneById(id);
+}
+
+// ============ WIN/LOSS ANALYSIS FUNCTIONS ============
+
+export async function createWinLossAnalysis(analysisData: InsertWinLossAnalysis) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const [result] = await db.insert(winLossAnalysis).values(analysisData);
+  return await getWinLossAnalysisByOpportunity(analysisData.opportunityId);
+}
+
+export async function getWinLossAnalysisByOpportunity(opportunityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const [analysis] = await db.select()
+    .from(winLossAnalysis)
+    .where(eq(winLossAnalysis.opportunityId, opportunityId));
+  return analysis;
+}
+
+export async function updateWinLossAnalysis(opportunityId: number, data: Partial<InsertWinLossAnalysis>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(winLossAnalysis)
+    .set(data)
+    .where(eq(winLossAnalysis.opportunityId, opportunityId));
+  
+  return await getWinLossAnalysisByOpportunity(opportunityId);
+}
+
+export async function deleteWinLossAnalysis(opportunityId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(winLossAnalysis)
+    .where(eq(winLossAnalysis.opportunityId, opportunityId));
 }
 
 // ============ CASE FUNCTIONS ============

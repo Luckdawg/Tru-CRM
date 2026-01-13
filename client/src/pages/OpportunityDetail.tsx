@@ -18,6 +18,7 @@ import { ArrowLeft, Save, TrendingUp, Trash2, Edit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { toast } from "sonner";
+import { WinLossAnalysisDialog } from "@/components/WinLossAnalysisDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +45,8 @@ export default function OpportunityDetail() {
 
   const [, setLocation] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
+  const [showWinLossDialog, setShowWinLossDialog] = useState(false);
+  const [pendingOutcome, setPendingOutcome] = useState<"Won" | "Lost" | null>(null);
 
   const updateMutation = trpc.opportunities.update.useMutation({
     onSuccess: () => {
@@ -104,6 +107,26 @@ export default function OpportunityDetail() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if stage is changing to Closed Won or Closed Lost
+    const isClosingDeal = (formData.stage === "Closed Won" || formData.stage === "Closed Lost") && 
+                          opportunity?.stage !== formData.stage;
+    
+    if (isClosingDeal) {
+      // Show win/loss analysis dialog before saving
+      setPendingOutcome(formData.stage === "Closed Won" ? "Won" : "Lost");
+      setShowWinLossDialog(true);
+    } else {
+      // Normal update without analysis
+      updateMutation.mutate({
+        id: oppId,
+        data: formData,
+      });
+    }
+  };
+  
+  const handleWinLossSuccess = () => {
+    // After analysis is saved, update the opportunity stage
     updateMutation.mutate({
       id: oppId,
       data: formData,
@@ -383,6 +406,17 @@ export default function OpportunityDetail() {
           </div>
         </form>
       </main>
+      
+      {/* Win/Loss Analysis Dialog */}
+      {pendingOutcome && (
+        <WinLossAnalysisDialog
+          open={showWinLossDialog}
+          onOpenChange={setShowWinLossDialog}
+          opportunityId={oppId}
+          outcome={pendingOutcome}
+          onSuccess={handleWinLossSuccess}
+        />
+      )}
     </div>
   );
 }

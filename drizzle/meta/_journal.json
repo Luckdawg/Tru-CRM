@@ -43,6 +43,13 @@
       "when": 1768259131673,
       "tag": "0005_chunky_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768261541947,
+      "tag": "0006_first_gladiator",
+      "breakpoints": true
     }
   ]
 }

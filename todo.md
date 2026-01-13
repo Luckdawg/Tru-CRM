@@ -361,3 +361,29 @@
 - [x] Fix stage enum mismatch between frontend and backend
 - [x] Test Create Opportunity form with corrected stages
 - [x] Test drag-and-drop across all pipeline stages (added useDroppable hooks)
+
+
+## New Feature - Win/Loss Analysis
+
+### Database Schema
+- [x] Design winLossAnalysis table (opportunityId, outcome, primaryReason, competitorName, dealSize, feedback, lessonsLearned)
+- [x] Add win/loss reason enums (8 win reasons, 8 loss reasons)
+- [x] Create database migration
+
+### Backend Procedures
+- [x] Create win/loss analysis CRUD procedures (create, get, getByOpportunity, update, delete)
+- [x] Add validation for required fields based on outcome
+- [x] Link analysis to opportunity record
+- [x] Add procedure to fetch analysis by opportunity
+
+### Frontend UI
+- [x] Build win/loss analysis form dialog with outcome-specific styling
+- [x] Add conditional fields (8 win reasons vs 8 loss reasons)
+- [x] Integrate form into OpportunityDetail stage change workflow
+- [x] Trigger dialog automatically when stage changes to Closed Won/Lost
+- [x] Add competitor tracking field for loss analysis
+
+### Testing
+- [x] Write comprehensive unit tests for win/loss procedures (24/25 passing)
+- [x] Test form validation and submission (tested win scenario successfully)
+- [x] Verify data persistence and retrieval (form saves correctly)
