@@ -660,3 +660,6 @@
 - [x] Fix persistent dashboard error - investigate all widget queries
 - [x] Add comprehensive null checks to all dashboard widgets
 - [x] Ensure all dashboard widgets load without errors
+- [x] Fix topAtRiskOpportunities widget - removed non-existent healthScore field
+- [x] Update widget to use probability instead of healthScore
+- [x] Add error logging to all widget procedures for debugging

@@ -2402,12 +2402,12 @@ export async function getTopAtRiskOpportunitiesWidget(userId?: number, limit: nu
     stage: opportunities.stage,
     amount: opportunities.amount,
     closeDate: opportunities.closeDate,
-    healthScore: opportunities.healthScore,
-    lastActivityDate: opportunities.lastActivityDate,
+    probability: opportunities.probability,
+    nextSteps: opportunities.nextSteps,
   })
     .from(opportunities)
     .where(and(...conditions))
-    .orderBy(asc(opportunities.healthScore))
+    .orderBy(asc(opportunities.probability)) // Lower probability = higher risk
     .limit(limit);
 
   // Get account names

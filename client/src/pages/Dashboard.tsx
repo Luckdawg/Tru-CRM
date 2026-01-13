@@ -262,7 +262,7 @@ export default function Dashboard() {
                         </div>
                         <div className="text-right">
                           <p className="font-medium">${opp.amount ? parseFloat(opp.amount.toString()).toLocaleString() : '0'}</p>
-                          <p className="text-xs text-red-600">Health: {opp.healthScore || 0}/100</p>
+                          <p className="text-xs text-red-600">Probability: {opp.probability || 0}%</p>
                         </div>
                       </div>
                     </Link>

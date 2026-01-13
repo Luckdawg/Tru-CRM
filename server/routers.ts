@@ -1327,28 +1327,58 @@ export const appRouter = router({
     topAtRiskOpportunities: protectedProcedure
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input, ctx }) => {
-        return await db.getTopAtRiskOpportunitiesWidget(ctx.user.id, input?.limit);
+        try {
+          const result = await db.getTopAtRiskOpportunitiesWidget(ctx.user.id, input?.limit);
+          return result;
+        } catch (error) {
+          console.error('[Widget Error] topAtRiskOpportunities:', error);
+          throw error;
+        }
       }),
 
     forecastAccuracyTrend: protectedProcedure
       .query(async ({ ctx }) => {
-        return await db.getForecastAccuracyTrendWidget(ctx.user.id);
+        try {
+          const result = await db.getForecastAccuracyTrendWidget(ctx.user.id);
+          return result;
+        } catch (error) {
+          console.error('[Widget Error] forecastAccuracyTrend:', error);
+          throw error;
+        }
       }),
 
     lowEngagementAccounts: protectedProcedure
       .input(z.object({ limit: z.number().optional() }).optional())
       .query(async ({ input, ctx }) => {
-        return await db.getLowEngagementAccountsWidget(ctx.user.id, input?.limit);
+        try {
+          const result = await db.getLowEngagementAccountsWidget(ctx.user.id, input?.limit);
+          return result;
+        } catch (error) {
+          console.error('[Widget Error] lowEngagementAccounts:', error);
+          throw error;
+        }
       }),
 
     pipelineByStage: protectedProcedure
       .query(async ({ ctx }) => {
-        return await db.getPipelineByStageWidget(ctx.user.id);
+        try {
+          const result = await db.getPipelineByStageWidget(ctx.user.id);
+          return result;
+        } catch (error) {
+          console.error('[Widget Error] pipelineByStage:', error);
+          throw error;
+        }
       }),
 
     winRateTrend: protectedProcedure
       .query(async ({ ctx }) => {
-        return await db.getWinRateTrendWidget(ctx.user.id);
+        try {
+          const result = await db.getWinRateTrendWidget(ctx.user.id);
+          return result;
+        } catch (error) {
+          console.error('[Widget Error] winRateTrend:', error);
+          throw error;
+        }
       }),
   }),
 
