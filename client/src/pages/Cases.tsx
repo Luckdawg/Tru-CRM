@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Plus, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import { CSVExportButton } from "@/components/CSVExportButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,10 +160,17 @@ export default function Cases() {
             <h2 className="text-2xl font-bold text-foreground">Support Cases</h2>
             <p className="text-muted-foreground">Manage customer support tickets and issues</p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Case
-          </Button>
+          <div className="flex gap-2">
+            <CSVExportButton 
+              data={cases || []} 
+              filename="cases" 
+              label="Export CSV"
+            />
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Case
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

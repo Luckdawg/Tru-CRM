@@ -27,6 +27,7 @@ import CSVImportExport from "@/components/CSVImportExport";
 import { useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { CSVExportButton } from "@/components/CSVExportButton";
 
 export default function Leads() {
   const { user, isAuthenticated } = useAuth();
@@ -162,13 +163,19 @@ export default function Leads() {
             <h2 className="text-2xl font-bold text-foreground">Leads</h2>
             <p className="text-muted-foreground">Track and qualify potential customers</p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Lead
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <CSVExportButton 
+              data={filteredLeads || []} 
+              filename="leads" 
+              label="Export CSV"
+            />
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Lead
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <form data-lead-form>
                 <DialogHeader>
@@ -276,6 +283,7 @@ export default function Leads() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Filters */}

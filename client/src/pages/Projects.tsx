@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Plus, FolderKanban, AlertTriangle, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import { CSVExportButton } from "@/components/CSVExportButton";
 import {
   Dialog,
   DialogContent,
@@ -142,13 +143,19 @@ export default function Projects() {
             <h2 className="text-2xl font-bold text-foreground">Projects & Implementations</h2>
             <p className="text-muted-foreground">Track onboarding and implementation projects</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <CSVExportButton 
+              data={projects || []} 
+              filename="projects" 
+              label="Export CSV"
+            />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Project
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
@@ -225,6 +232,7 @@ export default function Projects() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {isLoading ? (

@@ -1019,7 +1019,7 @@ export const appRouter = router({
       }),
   }),
 
-  winLossAnalysis: {
+  winLossAnalysis: router({
     create: protectedProcedure
       .input(z.object({
         opportunityId: z.number(),
@@ -1061,7 +1061,101 @@ export const appRouter = router({
         await db.deleteWinLossAnalysis(input.opportunityId);
         return { success: true };
       }),
-  },
+  }),
+
+  // CSV Export procedures
+  csvExport: router({
+    accounts: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getAccountsForExport(input?.ownerId);
+      }),
+    
+    contacts: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getContactsForExport(input?.ownerId);
+      }),
+    
+    opportunities: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getOpportunitiesForExport(input?.ownerId);
+      }),
+    
+    projects: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getProjectsForExport(input?.ownerId);
+      }),
+    
+    cases: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getCasesForExport(input?.ownerId);
+      }),
+    
+    leads: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getLeadsForExport(input?.ownerId);
+      }),
+  }),
+
+  // Analytics & Forecasting procedures
+  analytics: router({
+    salesCycleMetrics: protectedProcedure
+      .input(z.object({
+        ownerId: z.number().optional(),
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return await db.getSalesCycleMetrics(
+          input?.ownerId,
+          input?.startDate,
+          input?.endDate
+        );
+      }),
+
+    weightedPipelineForecast: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getWeightedPipelineForecast(input?.ownerId);
+      }),
+
+    dealHealthScores: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getDealHealthScores(input?.ownerId);
+      }),
+  }),
+
+  // Engagement Tracking procedures
+  engagement: router({
+    activityTimeline: protectedProcedure
+      .input(z.object({
+        accountId: z.number().optional(),
+        contactId: z.number().optional(),
+        opportunityId: z.number().optional(),
+        limit: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        return await db.getActivityTimeline(input);
+      }),
+
+    accountEngagementScore: protectedProcedure
+      .input(z.object({ accountId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAccountEngagementScore(input.accountId);
+      }),
+
+    allAccountEngagementScores: protectedProcedure
+      .input(z.object({ ownerId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getAllAccountEngagementScores(input?.ownerId);
+      }),
+  }),
 
 });
 

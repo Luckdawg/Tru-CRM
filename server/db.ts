@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, sql, like } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, like, not, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, 
@@ -956,4 +956,635 @@ export async function getForecastProjection() {
       forecastedRevenue: Number(item.totalValue) * winRate,
     })),
   };
+}
+
+// ============ CSV EXPORT FUNCTIONS ============
+
+/**
+ * Get accounts with enriched data for CSV export
+ */
+export async function getAccountsForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (ownerId) {
+    return await db.select().from(accounts)
+      .where(eq(accounts.ownerId, ownerId))
+      .orderBy(desc(accounts.createdAt));
+  }
+  return await db.select().from(accounts).orderBy(desc(accounts.createdAt));
+}
+
+/**
+ * Get contacts with account names for CSV export
+ */
+export async function getContactsForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const query = db
+    .select({
+      id: contacts.id,
+      firstName: contacts.firstName,
+      lastName: contacts.lastName,
+      email: contacts.email,
+      phone: contacts.phone,
+      role: contacts.role,
+      title: contacts.title,
+      accountId: contacts.accountId,
+      accountName: accounts.accountName,
+      isPrimary: contacts.isPrimary,
+      createdAt: contacts.createdAt,
+      updatedAt: contacts.updatedAt,
+    })
+    .from(contacts)
+    .leftJoin(accounts, eq(contacts.accountId, accounts.id));
+  
+  if (ownerId) {
+    return await query.where(eq(accounts.ownerId, ownerId)).orderBy(desc(contacts.createdAt));
+  }
+  return await query.orderBy(desc(contacts.createdAt));
+}
+
+/**
+ * Get opportunities with account names for CSV export
+ */
+export async function getOpportunitiesForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const query = db
+    .select({
+      id: opportunities.id,
+      opportunityName: opportunities.opportunityName,
+      accountId: opportunities.accountId,
+      accountName: accounts.accountName,
+      stage: opportunities.stage,
+      amount: opportunities.amount,
+      probability: opportunities.probability,
+      type: opportunities.type,
+      closeDate: opportunities.closeDate,
+      nextSteps: opportunities.nextSteps,
+      metrics: opportunities.metrics,
+      economicBuyerId: opportunities.economicBuyerId,
+      decisionCriteria: opportunities.decisionCriteria,
+      decisionProcess: opportunities.decisionProcess,
+      identifiedPain: opportunities.identifiedPain,
+      championId: opportunities.championId,
+      ownerId: opportunities.ownerId,
+      createdAt: opportunities.createdAt,
+      updatedAt: opportunities.updatedAt,
+    })
+    .from(opportunities)
+    .leftJoin(accounts, eq(opportunities.accountId, accounts.id));
+  
+  if (ownerId) {
+    return await query.where(eq(opportunities.ownerId, ownerId)).orderBy(desc(opportunities.createdAt));
+  }
+  return await query.orderBy(desc(opportunities.createdAt));
+}
+
+/**
+ * Get projects with account names for CSV export
+ */
+export async function getProjectsForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const query = db
+    .select({
+      id: projects.id,
+      projectName: projects.projectName,
+      accountId: projects.accountId,
+      accountName: accounts.accountName,
+      status: projects.status,
+      healthStatus: projects.healthStatus,
+      adoptionLevel: projects.adoptionLevel,
+      activeUsers: projects.activeUsers,
+      customerSentiment: projects.customerSentiment,
+      goLiveDate: projects.goLiveDate,
+      actualGoLiveDate: projects.actualGoLiveDate,
+      notes: projects.notes,
+      ownerId: projects.ownerId,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+    })
+    .from(projects)
+    .leftJoin(accounts, eq(projects.accountId, accounts.id));
+  
+  if (ownerId) {
+    return await query.where(eq(projects.ownerId, ownerId)).orderBy(desc(projects.createdAt));
+  }
+  return await query.orderBy(desc(projects.createdAt));
+}
+
+/**
+ * Get cases with account names for CSV export
+ */
+export async function getCasesForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const query = db
+    .select({
+      id: cases.id,
+      caseNumber: cases.caseNumber,
+      accountId: cases.accountId,
+      accountName: accounts.accountName,
+      subject: cases.subject,
+      priority: cases.priority,
+      type: cases.type,
+      status: cases.status,
+      description: cases.description,
+      resolution: cases.resolution,
+      resolvedAt: cases.resolvedAt,
+      ownerId: cases.ownerId,
+      createdAt: cases.createdAt,
+      updatedAt: cases.updatedAt,
+    })
+    .from(cases)
+    .leftJoin(accounts, eq(cases.accountId, accounts.id));
+  
+  if (ownerId) {
+    return await query.where(eq(cases.ownerId, ownerId)).orderBy(desc(cases.createdAt));
+  }
+  return await query.orderBy(desc(cases.createdAt));
+}
+
+/**
+ * Get leads for CSV export
+ */
+export async function getLeadsForExport(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (ownerId) {
+    return await db.select().from(leads)
+      .where(eq(leads.assignedTo, ownerId))
+      .orderBy(desc(leads.createdAt));
+  }
+  return await db.select().from(leads).orderBy(desc(leads.createdAt));
+}
+
+/**
+ * ========================================
+ * SALES ANALYTICS & FORECASTING
+ * ========================================
+ */
+
+/**
+ * Get sales cycle metrics (win rate, avg deal size, cycle length)
+ */
+export async function getSalesCycleMetrics(ownerId?: number, startDate?: Date, endDate?: Date) {
+  const db = await getDb();
+  if (!db) return null;
+
+  let query = db.select({
+    id: opportunities.id,
+    amount: opportunities.amount,
+    stage: opportunities.stage,
+    createdAt: opportunities.createdAt,
+    closedAt: opportunities.closedAt,
+    ownerId: opportunities.ownerId,
+  }).from(opportunities);
+
+  const conditions = [];
+  if (ownerId) {
+    conditions.push(eq(opportunities.ownerId, ownerId));
+  }
+  if (startDate) {
+    conditions.push(gte(opportunities.createdAt, startDate));
+  }
+  if (endDate) {
+    conditions.push(lte(opportunities.createdAt, endDate));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  const opps = await query;
+
+  // Calculate metrics
+  const closedWon = opps.filter(o => o.stage === 'Closed Won');
+  const closedLost = opps.filter(o => o.stage === 'Closed Lost');
+  const totalClosed = closedWon.length + closedLost.length;
+  
+  const winRate = totalClosed > 0 ? (closedWon.length / totalClosed) * 100 : 0;
+  
+  const avgDealSize = closedWon.length > 0
+    ? closedWon.reduce((sum, o) => sum + parseFloat(o.amount as any), 0) / closedWon.length
+    : 0;
+
+  // Calculate average sales cycle length (days from creation to close)
+  const cyclesWithDates = closedWon.filter(o => o.closedAt);
+  const avgCycleLength = cyclesWithDates.length > 0
+    ? cyclesWithDates.reduce((sum, o) => {
+        const days = Math.floor((o.closedAt!.getTime() - o.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0) / cyclesWithDates.length
+    : 0;
+
+  return {
+    winRate: Math.round(winRate * 10) / 10, // Round to 1 decimal
+    avgDealSize: Math.round(avgDealSize * 100) / 100,
+    avgCycleLength: Math.round(avgCycleLength),
+    totalOpportunities: opps.length,
+    closedWon: closedWon.length,
+    closedLost: closedLost.length,
+    openOpportunities: opps.length - totalClosed,
+  };
+}
+
+/**
+ * Get weighted pipeline forecast
+ */
+export async function getWeightedPipelineForecast(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const conditions = [
+    not(eq(opportunities.stage, 'Closed Won')),
+    not(eq(opportunities.stage, 'Closed Lost'))
+  ];
+
+  if (ownerId) {
+    conditions.push(eq(opportunities.ownerId, ownerId));
+  }
+
+  const openOpps = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    stage: opportunities.stage,
+    amount: opportunities.amount,
+    probability: opportunities.probability,
+    closeDate: opportunities.closeDate,
+    ownerId: opportunities.ownerId,
+  }).from(opportunities)
+    .where(and(...conditions));
+
+  // Calculate weighted amounts by stage
+  const byStage = openOpps.reduce((acc, opp) => {
+    const stage = opp.stage;
+    const amount = parseFloat(opp.amount as any);
+    const probability = opp.probability || 0;
+    const weightedAmount = (amount * probability) / 100;
+
+    if (!acc[stage]) {
+      acc[stage] = {
+        stage,
+        count: 0,
+        totalAmount: 0,
+        weightedAmount: 0,
+      };
+    }
+
+    acc[stage].count++;
+    acc[stage].totalAmount += amount;
+    acc[stage].weightedAmount += weightedAmount;
+
+    return acc;
+  }, {} as Record<string, { stage: string; count: number; totalAmount: number; weightedAmount: number }>);
+
+  const stageData = Object.values(byStage);
+
+  // Calculate totals
+  const totalPipeline = openOpps.reduce((sum, o) => sum + parseFloat(o.amount as any), 0);
+  const totalWeighted = openOpps.reduce((sum, o) => {
+    const amount = parseFloat(o.amount as any);
+    const probability = o.probability || 0;
+    return sum + (amount * probability / 100);
+  }, 0);
+
+  return {
+    totalPipeline: Math.round(totalPipeline * 100) / 100,
+    totalWeighted: Math.round(totalWeighted * 100) / 100,
+    byStage: stageData.map(s => ({
+      ...s,
+      totalAmount: Math.round(s.totalAmount * 100) / 100,
+      weightedAmount: Math.round(s.weightedAmount * 100) / 100,
+    })),
+    opportunityCount: openOpps.length,
+  };
+}
+
+/**
+ * Get deal health scores for opportunities
+ */
+export async function getDealHealthScores(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    not(eq(opportunities.stage, 'Closed Won')),
+    not(eq(opportunities.stage, 'Closed Lost'))
+  ];
+
+  if (ownerId) {
+    conditions.push(eq(opportunities.ownerId, ownerId));
+  }
+
+  const opps = await db.select({
+    id: opportunities.id,
+    opportunityName: opportunities.opportunityName,
+    stage: opportunities.stage,
+    amount: opportunities.amount,
+    probability: opportunities.probability,
+    closeDate: opportunities.closeDate,
+    metrics: opportunities.metrics,
+    economicBuyerId: opportunities.economicBuyerId,
+    decisionCriteria: opportunities.decisionCriteria,
+    decisionProcess: opportunities.decisionProcess,
+    identifiedPain: opportunities.identifiedPain,
+    championId: opportunities.championId,
+    competition: opportunities.competition,
+    nextSteps: opportunities.nextSteps,
+    createdAt: opportunities.createdAt,
+    updatedAt: opportunities.updatedAt,
+  }).from(opportunities)
+    .where(and(...conditions));
+
+  // Calculate health score for each opportunity
+  return opps.map(opp => {
+    let score = 0;
+    const factors: string[] = [];
+
+    // MEDDIC completeness (40 points max)
+    if (opp.metrics) { score += 7; factors.push('Metrics defined'); }
+    if (opp.economicBuyerId) { score += 7; factors.push('Economic buyer identified'); }
+    if (opp.decisionCriteria) { score += 7; factors.push('Decision criteria known'); }
+    if (opp.decisionProcess) { score += 6; factors.push('Decision process mapped'); }
+    if (opp.identifiedPain) { score += 7; factors.push('Pain identified'); }
+    if (opp.championId) { score += 6; factors.push('Champion engaged'); }
+
+    // Activity recency (20 points max)
+    const daysSinceUpdate = Math.floor((Date.now() - opp.updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceUpdate <= 7) {
+      score += 20;
+      factors.push('Recently updated');
+    } else if (daysSinceUpdate <= 14) {
+      score += 15;
+      factors.push('Updated within 2 weeks');
+    } else if (daysSinceUpdate <= 30) {
+      score += 10;
+      factors.push('Updated within month');
+    } else {
+      factors.push('⚠️ Stale (no recent activity)');
+    }
+
+    // Close date proximity (20 points max)
+    const daysToClose = Math.floor((opp.closeDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysToClose < 0) {
+      factors.push('⚠️ Past due');
+    } else if (daysToClose <= 30) {
+      score += 20;
+      factors.push('Closing soon');
+    } else if (daysToClose <= 60) {
+      score += 15;
+      factors.push('Closing this quarter');
+    } else if (daysToClose <= 90) {
+      score += 10;
+      factors.push('Closing next quarter');
+    }
+
+    // Next steps defined (10 points)
+    if (opp.nextSteps) {
+      score += 10;
+      factors.push('Next steps defined');
+    } else {
+      factors.push('⚠️ No next steps');
+    }
+
+    // Competition awareness (10 points)
+    if (opp.competition) {
+      score += 10;
+      factors.push('Competition tracked');
+    }
+
+    // Determine health status
+    let healthStatus: 'Healthy' | 'At Risk' | 'Critical';
+    if (score >= 70) {
+      healthStatus = 'Healthy';
+    } else if (score >= 40) {
+      healthStatus = 'At Risk';
+    } else {
+      healthStatus = 'Critical';
+    }
+
+    return {
+      opportunityId: opp.id,
+      opportunityName: opp.opportunityName,
+      stage: opp.stage,
+      amount: opp.amount,
+      healthScore: score,
+      healthStatus,
+      factors,
+      daysToClose,
+      daysSinceUpdate,
+    };
+  });
+}
+
+/**
+ * ========================================
+ * ACTIVITY TIMELINE & ENGAGEMENT TRACKING
+ * ========================================
+ */
+
+/**
+ * Get unified activity timeline for an entity
+ */
+export async function getActivityTimeline(params: {
+  accountId?: number;
+  contactId?: number;
+  opportunityId?: number;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { accountId, contactId, opportunityId, limit = 50 } = params;
+
+  const conditions = [];
+  if (accountId) {
+    conditions.push(and(
+      eq(activities.relatedToType, 'Account'),
+      eq(activities.relatedToId, accountId)
+    ));
+  }
+  if (contactId) {
+    conditions.push(and(
+      eq(activities.relatedToType, 'Contact'),
+      eq(activities.relatedToId, contactId)
+    ));
+  }
+  if (opportunityId) {
+    conditions.push(and(
+      eq(activities.relatedToType, 'Opportunity'),
+      eq(activities.relatedToId, opportunityId)
+    ));
+  }
+
+  if (conditions.length === 0) {
+    return [];
+  }
+
+  const timeline = await db.select({
+    id: activities.id,
+    type: activities.type,
+    subject: activities.subject,
+    notes: activities.notes,
+    activityDate: activities.activityDate,
+    duration: activities.duration,
+    relatedToType: activities.relatedToType,
+    relatedToId: activities.relatedToId,
+    ownerId: activities.ownerId,
+    createdAt: activities.createdAt,
+  })
+    .from(activities)
+    .where(or(...conditions))
+    .orderBy(desc(activities.activityDate))
+    .limit(limit);
+
+  return timeline;
+}
+
+/**
+ * Get engagement score for an account
+ */
+export async function getAccountEngagementScore(accountId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Get all activities for the account in the last 90 days
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const recentActivities = await db.select()
+    .from(activities)
+    .where(and(
+      eq(activities.relatedToType, 'Account'),
+      eq(activities.relatedToId, accountId),
+      gte(activities.activityDate, ninetyDaysAgo)
+    ));
+
+  // Calculate engagement score
+  let score = 0;
+  const factors: string[] = [];
+
+  // Activity frequency (40 points max)
+  const activityCount = recentActivities.length;
+  if (activityCount >= 20) {
+    score += 40;
+    factors.push('Very active (20+ activities)');
+  } else if (activityCount >= 10) {
+    score += 30;
+    factors.push('Active (10-19 activities)');
+  } else if (activityCount >= 5) {
+    score += 20;
+    factors.push('Moderate (5-9 activities)');
+  } else if (activityCount > 0) {
+    score += 10;
+    factors.push('Low activity (1-4 activities)');
+  } else {
+    factors.push('⚠️ No recent activity');
+  }
+
+  // Activity diversity (20 points max)
+  const activityTypes = new Set(recentActivities.map(a => a.type));
+  const diversityScore = Math.min(activityTypes.size * 5, 20);
+  score += diversityScore;
+  if (activityTypes.size >= 4) {
+    factors.push('High diversity (4+ activity types)');
+  } else if (activityTypes.size >= 2) {
+    factors.push('Moderate diversity (2-3 types)');
+  }
+
+  // Recency (20 points max)
+  if (recentActivities.length > 0) {
+    const mostRecent = recentActivities[0];
+    const daysSince = Math.floor((Date.now() - mostRecent.activityDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysSince <= 7) {
+      score += 20;
+      factors.push('Recent activity (within 7 days)');
+    } else if (daysSince <= 14) {
+      score += 15;
+      factors.push('Activity within 2 weeks');
+    } else if (daysSince <= 30) {
+      score += 10;
+      factors.push('Activity within month');
+    } else {
+      factors.push('⚠️ Stale (30+ days since activity)');
+    }
+  }
+
+  // Meeting frequency (20 points max)
+  const meetings = recentActivities.filter(a => a.type === 'Meeting');
+  if (meetings.length >= 5) {
+    score += 20;
+    factors.push('Frequent meetings (5+)');
+  } else if (meetings.length >= 3) {
+    score += 15;
+    factors.push('Regular meetings (3-4)');
+  } else if (meetings.length >= 1) {
+    score += 10;
+    factors.push('Some meetings (1-2)');
+  } else {
+    factors.push('⚠️ No meetings');
+  }
+
+  // Determine engagement level
+  let engagementLevel: 'High' | 'Medium' | 'Low';
+  if (score >= 70) {
+    engagementLevel = 'High';
+  } else if (score >= 40) {
+    engagementLevel = 'Medium';
+  } else {
+    engagementLevel = 'Low';
+  }
+
+  return {
+    accountId,
+    engagementScore: score,
+    engagementLevel,
+    factors,
+    activityCount,
+    activityTypes: Array.from(activityTypes),
+    lastActivityDate: recentActivities.length > 0 ? recentActivities[0].activityDate : null,
+  };
+}
+
+/**
+ * Get engagement scores for all accounts
+ */
+export async function getAllAccountEngagementScores(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let accountsQuery = db.select({
+    id: accounts.id,
+    accountName: accounts.accountName,
+    ownerId: accounts.ownerId,
+  }).from(accounts);
+
+  if (ownerId) {
+    accountsQuery = accountsQuery.where(eq(accounts.ownerId, ownerId)) as any;
+  }
+
+  const accountsList = await accountsQuery;
+
+  // Get engagement scores for each account
+  const scores = await Promise.all(
+    accountsList.map(async (account) => {
+      const engagementData = await getAccountEngagementScore(account.id);
+      return {
+        ...account,
+        ...engagementData,
+      };
+    })
+  );
+
+  // Sort by engagement score descending
+  return scores.sort((a, b) => (b?.engagementScore || 0) - (a?.engagementScore || 0));
 }

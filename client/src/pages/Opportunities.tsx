@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { CSVExportButton } from "@/components/CSVExportButton";
 
 export default function Opportunities() {
   const { user, isAuthenticated } = useAuth();
@@ -139,13 +140,19 @@ export default function Opportunities() {
             <h2 className="text-2xl font-bold text-foreground">Sales Pipeline</h2>
             <p className="text-muted-foreground">Track and manage your sales opportunities</p>
           </div>
-          <Dialog key={isCreateDialogOpen ? 'open' : 'closed'} open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Opportunity
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <CSVExportButton 
+              data={filteredOpps || []} 
+              filename="opportunities" 
+              label="Export CSV"
+            />
+            <Dialog key={isCreateDialogOpen ? 'open' : 'closed'} open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Opportunity
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Opportunity</DialogTitle>
@@ -207,6 +214,7 @@ export default function Opportunities() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {isLoading ? (

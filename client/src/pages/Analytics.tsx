@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
+import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { TrendingUp, DollarSign, Target, Users } from "lucide-react";
+import { TrendingUp, DollarSign, Target, Users, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const COLORS = ["#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#0891b2"];
 
@@ -16,6 +17,18 @@ export default function Analytics() {
   });
 
   const { data: leads } = trpc.leads.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const { data: salesMetrics } = trpc.analytics.salesCycleMetrics.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const { data: forecast } = trpc.analytics.weightedPipelineForecast.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const { data: healthScores } = trpc.analytics.dealHealthScores.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
@@ -45,6 +58,11 @@ export default function Analytics() {
     }
     return acc;
   }, [] as Array<{ source: string; count: number }>);
+
+  // Group health scores by status
+  const healthyDeals = healthScores?.filter(d => d.healthStatus === 'Healthy') || [];
+  const atRiskDeals = healthScores?.filter(d => d.healthStatus === 'At Risk') || [];
+  const criticalDeals = healthScores?.filter(d => d.healthStatus === 'Critical') || [];
 
   // Win rate calculation
   const wonOpps = opportunities?.filter(opp => opp.stage === "Closed Won").length || 0;
@@ -114,7 +132,191 @@ export default function Analytics() {
           <p className="text-muted-foreground">Comprehensive analytics and insights</p>
         </div>
 
-        {/* Key Metrics */}
+        {/* Sales Cycle Metrics from Analytics API */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Sales Cycle Performance</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+                <Target className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{salesMetrics?.winRate.toFixed(1) || '0.0'}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {salesMetrics?.closedWon || 0} won / {(salesMetrics?.closedWon || 0) + (salesMetrics?.closedLost || 0)} closed
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg Deal Size</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  ${(salesMetrics?.avgDealSize || 0).toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  From {salesMetrics?.closedWon || 0} won deals
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg Sales Cycle</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{salesMetrics?.avgCycleLength || 0} days</div>
+                <p className="text-xs text-muted-foreground">From opportunity to close</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Open Pipeline</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{salesMetrics?.openOpportunities || 0}</div>
+                <p className="text-xs text-muted-foreground">Active opportunities</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Weighted Forecast */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Weighted Pipeline Forecast</h3>
+          <Card>
+            <CardHeader>
+              <CardTitle>Pipeline Summary</CardTitle>
+              <CardDescription>Probability-weighted revenue forecast by stage</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pipeline Value</p>
+                  <p className="text-3xl font-bold">
+                    ${(forecast?.totalPipeline || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Weighted Forecast</p>
+                  <p className="text-3xl font-bold text-primary">
+                    ${(forecast?.totalWeighted || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {forecast?.byStage.map((stage) => (
+                  <div key={stage.stage} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{stage.stage}</span>
+                        <Badge variant="outline">{stage.count} deals</Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Pipeline: ${stage.totalAmount.toLocaleString()} → 
+                        Weighted: ${stage.weightedAmount.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Deal Health Dashboard */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">Deal Health Dashboard</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Healthy Deals</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{healthyDeals.length}</div>
+                <p className="text-xs text-muted-foreground">Score ≥ 70</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">At Risk</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{atRiskDeals.length}</div>
+                <p className="text-xs text-muted-foreground">Score 40-69</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Critical</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{criticalDeals.length}</div>
+                <p className="text-xs text-muted-foreground">Score &lt; 40</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {(criticalDeals.length > 0 || atRiskDeals.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Deals Requiring Attention</CardTitle>
+                <CardDescription>
+                  Focus on these opportunities to improve win probability
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[...criticalDeals, ...atRiskDeals]
+                    .sort((a, b) => a.healthScore - b.healthScore)
+                    .slice(0, 10)
+                    .map((deal) => (
+                      <Link key={deal.opportunityId} href={`/opportunities/${deal.opportunityId}`}>
+                        <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{deal.opportunityName}</span>
+                              <Badge 
+                                variant={deal.healthStatus === 'Critical' ? 'destructive' : 'outline'}
+                                className={deal.healthStatus === 'At Risk' ? 'bg-yellow-100 text-yellow-800' : ''}
+                              >
+                                {deal.healthStatus}
+                              </Badge>
+                              <Badge variant="outline">{deal.stage}</Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              ${parseFloat(deal.amount as any).toLocaleString()} • 
+                              Score: {deal.healthScore}/100 • 
+                              Closes in {deal.daysToClose} days
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {deal.factors.slice(0, 3).join(' • ')}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Original Charts Section */}
+        <h3 className="text-lg font-semibold mb-4">Additional Insights</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

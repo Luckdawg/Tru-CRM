@@ -14,6 +14,7 @@ import LeadDetail from "./pages/LeadDetail";
 import Opportunities from "@/pages/Opportunities";
 import Pipeline from "@/pages/Pipeline";
 import Analytics from "./pages/Analytics";
+import Engagement from "./pages/Engagement";
 import EmailSettings from "./pages/EmailSettings";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import Projects from "./pages/Projects";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/opportunities/:id" component={OpportunityDetail} />
       <Route path="/pipeline" component={Pipeline} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/engagement" component={Engagement} />
       <Route path="/email-settings" component={EmailSettings} />
       <Route path={"/projects"} component={Projects} />
       <Route path={"/projects/:id"} component={ProjectDetail} />

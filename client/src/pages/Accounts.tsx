@@ -25,6 +25,7 @@ import { Building2, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { CSVExportButton } from "@/components/CSVExportButton";
 
 export default function Accounts() {
   const { user, isAuthenticated } = useAuth();
@@ -145,13 +146,19 @@ export default function Accounts() {
             <h2 className="text-2xl font-bold text-foreground">Accounts</h2>
             <p className="text-muted-foreground">Manage your customer accounts</p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Account
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <CSVExportButton 
+              data={filteredAccounts || []} 
+              filename="accounts" 
+              label="Export CSV"
+            />
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Account
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <form data-account-form>
                 <DialogHeader>
@@ -256,6 +263,7 @@ export default function Accounts() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Search */}

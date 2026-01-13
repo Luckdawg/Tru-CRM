@@ -387,3 +387,190 @@
 - [x] Write comprehensive unit tests for win/loss procedures (24/25 passing)
 - [x] Test form validation and submission (tested win scenario successfully)
 - [x] Verify data persistence and retrieval (form saves correctly)
+
+
+## Enterprise Analytics & Reporting - Phase 4
+
+### 1. Advanced Reporting & Export Capabilities
+
+#### CSV/PDF Export for All Modules
+- [x] Implement CSV export for Accounts with filtering
+- [x] Implement CSV export for Contacts with account relationships
+- [x] Implement CSV export for Opportunities with pipeline data
+- [x] Implement CSV export for Projects with health metrics
+- [x] Implement CSV export for Cases with resolution tracking
+- [x] Implement CSV export for Leads
+- [ ] Add PDF export for Accounts list
+- [ ] Add PDF export for Contacts list
+- [ ] Add PDF export for Opportunities list
+- [ ] Add PDF export for Projects list
+- [ ] Add PDF export for Cases list
+
+#### Customizable Report Builder
+- [ ] Design report builder UI with module selection
+- [ ] Implement cross-module join logic (accounts + opportunities + projects)
+- [ ] Add date range filters (last 30/60/90 days, quarter, year, custom)
+- [ ] Add owner/region/tier filters
+- [ ] Implement grouping and aggregation (SUM, AVG, COUNT)
+- [ ] Add save report functionality
+- [ ] Implement scheduled reports with email delivery
+
+#### Required Report Types
+- [ ] Build sales forecasting report (by rep, region, account)
+- [ ] Create pipeline aging report (days in each stage)
+- [ ] Build account health scorecard report
+- [ ] Create project implementation status report
+- [ ] Add chart export as image/PDF
+- [ ] Add company branding/logo to exported reports
+
+### 2. Sales Performance & Forecasting Analytics
+
+#### Sales Cycle Metrics
+- [ ] Calculate average days in each pipeline stage
+- [ ] Build stage-to-stage conversion rate analytics
+- [ ] Create win/loss analysis by pipeline stage
+- [ ] Add win/loss analysis by opportunity type
+- [ ] Add win/loss analysis by account segment/industry
+- [ ] Build sales cycle velocity dashboard
+
+#### Forecasting Models
+- [ ] Implement probability-weighted pipeline forecasting
+- [ ] Add stage-based probability percentages (Discovery 10%, Solution Fit 25%, PoC 40%, etc.)
+- [ ] Build monthly revenue forecast
+- [ ] Build quarterly revenue forecast
+- [ ] Implement scenario modeling (best-case, expected-case, worst-case)
+- [ ] Add forecast vs actual tracking
+
+#### Rep-Level Metrics
+- [ ] Build individual rep pipeline dashboard
+- [ ] Calculate conversion rates by rep
+- [ ] Track activity metrics per rep (calls, meetings, proposals)
+- [ ] Add commission tracking table and calculations
+- [ ] Build quota attainment dashboard
+- [ ] Create rep performance comparison view
+
+### 3. Deal Tracking & Probability Weighting
+
+#### Deal Health Scoring
+- [ ] Design deal health scoring algorithm
+- [ ] Implement stage-based probability adjustments
+- [ ] Add custom probability models by deal type
+- [ ] Add custom probability models by industry
+- [ ] Calculate buyer engagement level score
+- [ ] Display deal health score on opportunity detail page
+
+#### Deal Milestones & Risk
+- [ ] Add decision date tracking to opportunities
+- [ ] Add next steps field to opportunities
+- [ ] Add action items tracking to opportunities
+- [ ] Implement competitor tracking per deal
+- [ ] Build automated deal risk indicators (stalled stages, low engagement)
+- [ ] Create deal risk alert system
+- [ ] Add deal risk dashboard
+
+#### Communications & Documents
+- [ ] Extend activity logging for automatic email capture
+- [ ] Add document management table (proposals, contracts, meeting notes)
+- [ ] Link documents to opportunities and accounts
+- [ ] Track document status (sent, opened, signed)
+- [ ] Build document activity timeline
+
+#### Deal Reviews
+- [ ] Create manager review workflow for deals
+- [ ] Build deal inspection dashboard for pipeline reviews
+- [ ] Add deal review notes and approval tracking
+
+### 4. Activity & Engagement Tracking
+
+#### Activity Timeline (Per Account & Deal)
+- [ ] Build unified activity timeline component
+- [ ] Show email interactions in timeline
+- [ ] Show call logs in timeline
+- [ ] Show meetings in timeline
+- [ ] Show document activity in timeline
+- [ ] Add timeline filtering by activity type
+- [ ] Add timeline to account detail page
+- [ ] Add timeline to opportunity detail page
+
+#### Engagement Metrics
+- [ ] Calculate last touch date for accounts
+- [ ] Calculate interaction frequency
+- [ ] Track email response rates
+- [ ] Build account engagement score algorithm
+- [ ] Display engagement metrics on account detail page
+
+#### Activity Dashboards
+- [ ] Build weekly sales activity summary dashboard
+- [ ] Show upcoming activities and follow-ups
+- [ ] Show overdue tasks and action items
+- [ ] Add activity metrics by rep
+- [ ] Create activity heatmap visualization
+
+#### Integrations
+- [ ] Verify Gmail integration for automatic email logging (already exists)
+- [ ] Verify Outlook integration for automatic email logging (already exists)
+- [ ] Verify calendar sync functionality (already exists)
+- [ ] Enhance email activity matching logic
+
+### Testing & Quality Assurance
+- [ ] Write unit tests for CSV export functions
+- [ ] Write unit tests for PDF export functions
+- [ ] Write unit tests for sales cycle metrics calculations
+- [ ] Write unit tests for forecasting algorithms
+- [ ] Write unit tests for deal health scoring
+- [ ] Write unit tests for engagement scoring
+- [ ] Test report builder with complex queries
+- [ ] Test scheduled reports delivery
+- [ ] Performance test with large datasets (10k+ opportunities)
+- [ ] Verify all exports work correctly
+
+
+## Completed Features - Phase 4
+
+### CSV/PDF Export
+- [x] Implement CSV export for all modules (Accounts, Contacts, Opportunities, Projects, Cases, Leads)
+- [x] Add export buttons to all list pages
+- [x] Create reusable CSVExportButton component
+- [x] Implement CSV formatting utilities with proper escaping
+- [x] Add date/currency formatting for exports
+
+## Completed Analytics Features
+
+### Sales Cycle Metrics & Forecasting
+- [x] Calculate win rate with closed won/lost tracking
+- [x] Calculate average deal size from won deals
+- [x] Track sales cycle length from creation to close
+- [x] Implement weighted pipeline forecasting with probability
+- [x] Add stage-based pipeline breakdown
+- [x] Create sales cycle performance dashboard
+
+### Deal Health Scoring & Risk Detection
+- [x] Implement MEDDIC completeness scoring (40 points)
+- [x] Add activity recency scoring (20 points)
+- [x] Add close date proximity scoring (20 points)
+- [x] Add next steps definition scoring (10 points)
+- [x] Add competition awareness scoring (10 points)
+- [x] Categorize deals as Healthy (70+) / At Risk (40-69) / Critical (<40)
+- [x] Create "Deals Requiring Attention" dashboard
+- [x] Show stale opportunities (no activity in 14+ days)
+- [x] Show incomplete MEDDIC opportunities
+- [x] Show opportunities past expected close date
+
+### Testing
+- [x] Write unit tests for CSV export functions (20/20 passing)
+- [x] Write unit tests for analytics calculations (22/22 passing)
+- [x] Write unit tests for engagement tracking (18/18 passing)
+
+
+### Engagement Tracking
+- [x] Implement activity timeline for accounts, contacts, and opportunities
+- [x] Build account engagement scoring algorithm (0-100 scale)
+- [x] Calculate engagement based on activity frequency (40 points)
+- [x] Calculate engagement based on activity diversity (20 points)
+- [x] Calculate engagement based on recency (20 points)
+- [x] Calculate engagement based on meeting frequency (20 points)
+- [x] Categorize accounts as High (70+) / Medium (40-69) / Low (<40) engagement
+- [x] Create engagement dashboard showing all accounts by engagement level
+- [x] Highlight low-engagement accounts requiring attention
+- [x] Track last activity date for each account
+- [x] Add engagement page to navigation
