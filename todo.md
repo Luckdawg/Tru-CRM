@@ -663,3 +663,11 @@
 - [x] Fix topAtRiskOpportunities widget - removed non-existent healthScore field
 - [x] Update widget to use probability instead of healthScore
 - [x] Add error logging to all widget procedures for debugging
+
+
+## Leads Page CSV Import Not Working
+
+- [x] Investigate CSV import functionality on leads page
+- [x] Identify root cause of import failure
+- [x] Fix the issue permanently
+- [x] Test CSV import with sample data

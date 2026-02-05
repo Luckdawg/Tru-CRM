@@ -86,27 +86,57 @@ export default function CSVImportExport({ type }: CSVImportExportProps) {
           for (const row of results.data as any[]) {
             try {
               if (type === "leads") {
+                // Validate required fields
+                if (!row.firstName || !row.lastName || !row.email || !row.company) {
+                  console.error("Skipping row with missing required fields:", row);
+                  errorCount++;
+                  continue;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(row.email)) {
+                  console.error("Skipping row with invalid email:", row.email);
+                  errorCount++;
+                  continue;
+                }
+                
                 await createLead.mutateAsync({
-                  firstName: row.firstName || "",
-                  lastName: row.lastName || "",
-                  email: row.email || "",
-                  phone: row.phone || null,
-                  company: row.company || "",
-                  title: row.title || null,
+                  firstName: row.firstName.trim(),
+                  lastName: row.lastName.trim(),
+                  email: row.email.trim().toLowerCase(),
+                  phone: row.phone?.trim() || undefined,
+                  company: row.company.trim(),
+                  title: row.title?.trim() || undefined,
                   leadSource: row.leadSource || "Website",
                   status: row.status || "New",
-                  segment: row.segment || "SMB",
+                  segment: row.segment || undefined,
                   score: parseInt(row.score) || 0,
-                  notes: row.notes || null,
+                  notes: row.notes?.trim() || undefined,
                 });
               } else if (type === "contacts") {
+                // Validate required fields
+                if (!row.firstName || !row.lastName || !row.email || !row.accountId) {
+                  console.error("Skipping row with missing required fields:", row);
+                  errorCount++;
+                  continue;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(row.email)) {
+                  console.error("Skipping row with invalid email:", row.email);
+                  errorCount++;
+                  continue;
+                }
+                
                 await createContact.mutateAsync({
-                  firstName: row.firstName || "",
-                  lastName: row.lastName || "",
-                  email: row.email || "",
-                  phone: row.phone || null,
-                  title: row.title || null,
-                  accountId: parseInt(row.accountId) || 1,
+                  firstName: row.firstName.trim(),
+                  lastName: row.lastName.trim(),
+                  email: row.email.trim().toLowerCase(),
+                  phone: row.phone?.trim() || undefined,
+                  title: row.title?.trim() || undefined,
+                  accountId: parseInt(row.accountId),
                 });
               }
               successCount++;
