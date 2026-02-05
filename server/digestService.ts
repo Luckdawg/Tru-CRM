@@ -1,5 +1,6 @@
 import * as db from './db';
 import { notifyOwner } from './_core/notification';
+import { logger } from './_core/logger';
 
 /**
  * Generate and send email digest for a user
@@ -110,7 +111,7 @@ export async function runDigestJob(frequency: 'Daily' | 'Weekly') {
 
   const usersToNotify = await db.getUsersForDigest(frequency, currentDay, currentHour);
 
-  console.log(`[Digest] Running ${frequency} digest job for ${usersToNotify.length} users`);
+  logger.info('Digest job started', { frequency, userCount: usersToNotify.length, currentDay, currentHour });
 
   for (const userPref of usersToNotify) {
     // Get user info

@@ -3,6 +3,8 @@ import { createActivityFromEmail } from './emailSync';
 import { getDb } from './db';
 import { emailConnections } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from './_core/logger';
+import { checkIdempotency, recordIdempotency } from './_core/idempotency';
 
 const router = Router();
 
@@ -37,12 +39,26 @@ router.post('/webhooks/gmail', async (req: Request, res: Response) => {
     const emailAddress = notification.emailAddress;
     const historyId = notification.historyId;
 
-    console.log(`[Gmail Webhook] Received notification for ${emailAddress}, historyId: ${historyId}`);
+    const idempotencyKey = `gmail-webhook-${message.messageId || historyId}`;
+    
+    logger.info('Gmail webhook notification received', { 
+      emailAddress, 
+      historyId,
+      messageId: message.messageId,
+      idempotencyKey
+    });
+
+    // Check if we've already processed this notification
+    if (await checkIdempotency(idempotencyKey)) {
+      logger.info('Gmail webhook: duplicate notification ignored', { idempotencyKey });
+      res.status(200).json({ success: true, message: 'Already processed' });
+      return;
+    }
 
     // Find the email connection for this user
     const db = await getDb();
     if (!db) {
-      console.error('[Gmail Webhook] Database not available');
+      logger.error('Gmail webhook: database not available');
       res.status(503).json({ error: 'Database unavailable' });
       return;
     }
@@ -55,7 +71,7 @@ router.post('/webhooks/gmail', async (req: Request, res: Response) => {
       );
 
     if (connections.length === 0) {
-      console.warn(`[Gmail Webhook] No connection found for ${emailAddress}`);
+      logger.warn('Gmail webhook: no connection found', { emailAddress });
       res.status(404).json({ error: 'Connection not found' });
       return;
     }
@@ -65,13 +81,20 @@ router.post('/webhooks/gmail', async (req: Request, res: Response) => {
     // Log the notification for now
     // Full sync implementation would fetch new emails using Gmail API
     // and create activities using createActivityFromEmail()
-    console.log(`[Gmail Webhook] Notification received for ${emailAddress}, historyId: ${historyId}`);
-    console.log(`[Gmail Webhook] Would sync emails for connection ${connection.id}`);
+    logger.info('Gmail webhook: would sync emails', { 
+      emailAddress, 
+      historyId, 
+      connectionId: connection.id,
+      userId: connection.userId 
+    });
+
+    // Record that we've processed this notification
+    await recordIdempotency(idempotencyKey, { emailAddress, historyId });
 
     // Always return 200 to acknowledge receipt (prevents Pub/Sub retries)
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error('[Gmail Webhook] Error processing notification:', error);
+    logger.error('Gmail webhook: error processing notification', {}, error as Error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -93,7 +116,7 @@ router.post('/webhooks/outlook', async (req: Request, res: Response) => {
     // Handle validation request (sent when creating subscription)
     const validationToken = req.query.validationToken as string;
     if (validationToken) {
-      console.log('[Outlook Webhook] Responding to validation request');
+      logger.info('Outlook webhook: responding to validation request');
       res.status(200).send(validationToken);
       return;
     }
@@ -106,11 +129,11 @@ router.post('/webhooks/outlook', async (req: Request, res: Response) => {
       return;
     }
 
-    console.log(`[Outlook Webhook] Received ${notifications.length} notification(s)`);
+    logger.info('Outlook webhook: notifications received', { count: notifications.length });
 
     const db = await getDb();
     if (!db) {
-      console.error('[Outlook Webhook] Database not available');
+      logger.error('Outlook webhook: database not available');
       res.status(503).json({ error: 'Database unavailable' });
       return;
     }
@@ -120,8 +143,23 @@ router.post('/webhooks/outlook', async (req: Request, res: Response) => {
       const subscriptionId = notification.subscriptionId;
       const changeType = notification.changeType;
       const resource = notification.resource;
+      const clientState = notification.clientState;
+      
+      // Create idempotency key from notification ID or combination of fields
+      const idempotencyKey = `outlook-webhook-${subscriptionId}-${resource}-${changeType}`;
 
-      console.log(`[Outlook Webhook] Processing ${changeType} for subscription ${subscriptionId}`);
+      logger.debug('Outlook webhook: processing notification', { 
+        changeType, 
+        subscriptionId, 
+        resource,
+        idempotencyKey
+      });
+
+      // Check if we've already processed this notification
+      if (await checkIdempotency(idempotencyKey)) {
+        logger.info('Outlook webhook: duplicate notification ignored', { idempotencyKey });
+        continue;
+      }
 
       // Find the connection associated with this subscription
       const connections = await db
@@ -132,7 +170,7 @@ router.post('/webhooks/outlook', async (req: Request, res: Response) => {
         );
 
       if (connections.length === 0) {
-        console.warn(`[Outlook Webhook] No connection found for subscription ${subscriptionId}`);
+        logger.warn('Outlook webhook: no connection found', { subscriptionId });
         continue;
       }
 
@@ -141,14 +179,20 @@ router.post('/webhooks/outlook', async (req: Request, res: Response) => {
       // Log the notification for now
       // Full sync implementation would fetch new emails using Microsoft Graph API
       // and create activities using createActivityFromEmail()
-      console.log(`[Outlook Webhook] Notification received for user ${connection.userId}`);
-      console.log(`[Outlook Webhook] Would sync emails for connection ${connection.id}`);
+      logger.info('Outlook webhook: would sync emails', { 
+        userId: connection.userId, 
+        connectionId: connection.id,
+        changeType 
+      });
+
+      // Record that we've processed this notification
+      await recordIdempotency(idempotencyKey, { subscriptionId, changeType, resource });
     }
 
     // Return 202 Accepted to acknowledge receipt
     res.status(202).json({ success: true });
   } catch (error) {
-    console.error('[Outlook Webhook] Error processing notification:', error);
+    logger.error('Outlook webhook: error processing notification', {}, error as Error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -193,18 +237,18 @@ router.post('/webhooks/renew', async (req: Request, res: Response) => {
       // Renew Gmail watch
       // This would call Gmail API to set up a new watch
       // Implementation depends on having the Gmail API client configured
-      console.log(`[Webhook Renewal] Gmail watch renewal for connection ${connectionId}`);
+      logger.info('Webhook renewal: Gmail watch renewal requested', { connectionId });
       res.status(501).json({ error: 'Gmail watch renewal not yet implemented' });
     } else if (provider === 'outlook') {
       // Renew Outlook subscription
       // This would call Microsoft Graph API to extend the subscription
-      console.log(`[Webhook Renewal] Outlook subscription renewal for connection ${connectionId}`);
+      logger.info('Webhook renewal: Outlook subscription renewal requested', { connectionId });
       res.status(501).json({ error: 'Outlook subscription renewal not yet implemented' });
     } else {
       res.status(400).json({ error: 'Invalid provider' });
     }
   } catch (error) {
-    console.error('[Webhook Renewal] Error:', error);
+    logger.error('Webhook renewal: error', {}, error as Error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

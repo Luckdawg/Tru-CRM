@@ -4,6 +4,8 @@ import 'isomorphic-fetch';
 import { getDb } from './db';
 import { emailConnections, activities, contacts, leads, accounts } from '../drizzle/schema';
 import { eq, and, or } from 'drizzle-orm';
+import { logger } from './_core/logger';
+import { withRetry } from './_core/errorHandler';
 
 /**
  * Gmail API Integration
@@ -31,23 +33,29 @@ export class GmailSync {
     const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
 
     try {
-      // Get list of message IDs
-      const response = await gmail.users.messages.list({
-        userId: 'me',
-        maxResults,
-        q: 'in:sent OR in:inbox', // both sent and received
-      });
+      // Get list of message IDs with retry logic
+      const response = await withRetry(
+        () => gmail.users.messages.list({
+          userId: 'me',
+          maxResults,
+          q: 'in:sent OR in:inbox', // both sent and received
+        }),
+        { maxRetries: 3, exponentialBackoff: true }
+      );
 
       const messages = response.data.messages || [];
       const emailData: any[] = [];
 
       // Fetch full message details
       for (const message of messages) {
-        const fullMessage = await gmail.users.messages.get({
-          userId: 'me',
-          id: message.id!,
-          format: 'full',
-        });
+        const fullMessage = await withRetry(
+          () => gmail.users.messages.get({
+            userId: 'me',
+            id: message.id!,
+            format: 'full',
+          }),
+          { maxRetries: 3, exponentialBackoff: true }
+        );
 
         const headers = fullMessage.data.payload?.headers || [];
         const subject = headers.find(h => h.name === 'Subject')?.value || '(No Subject)';
@@ -87,7 +95,7 @@ export class GmailSync {
 
       return emailData;
     } catch (error) {
-      console.error('Gmail fetch error:', error);
+      logger.error('Gmail fetch error', { maxResults }, error as Error);
       throw error;
     }
   }
@@ -118,7 +126,7 @@ export class GmailSync {
         location: event.location || '',
       }));
     } catch (error) {
-      console.error('Calendar fetch error:', error);
+      logger.error('Google Calendar fetch error', { maxResults }, error as Error);
       throw error;
     }
   }
@@ -143,12 +151,15 @@ export class OutlookSync {
    */
   async fetchEmails(maxResults = 50): Promise<any[]> {
     try {
-      const response = await this.client
-        .api('/me/messages')
-        .top(maxResults)
-        .select('id,subject,from,toRecipients,receivedDateTime,body,bodyPreview,isRead')
-        .orderby('receivedDateTime DESC')
-        .get();
+      const response = await withRetry(
+        () => this.client
+          .api('/me/messages')
+          .top(maxResults)
+          .select('id,subject,from,toRecipients,receivedDateTime,body,bodyPreview,isRead')
+          .orderby('receivedDateTime DESC')
+          .get(),
+        { maxRetries: 3, exponentialBackoff: true }
+      );
 
       return response.value.map((message: any) => ({
         messageId: message.id,
@@ -162,7 +173,7 @@ export class OutlookSync {
         isRead: message.isRead,
       }));
     } catch (error) {
-      console.error('Outlook fetch error:', error);
+      logger.error('Outlook fetch error', { maxResults }, error as Error);
       throw error;
     }
   }
@@ -174,13 +185,16 @@ export class OutlookSync {
     try {
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       
-      const response = await this.client
-        .api('/me/calendar/events')
-        .top(maxResults)
-        .filter(`start/dateTime ge '${startDate}'`)
-        .select('id,subject,body,start,end,attendees,location')
-        .orderby('start/dateTime')
-        .get();
+      const response = await withRetry(
+        () => this.client
+          .api('/me/calendar/events')
+          .top(maxResults)
+          .filter(`start/dateTime ge '${startDate}'`)
+          .select('id,subject,body,start,end,attendees,location')
+          .orderby('start/dateTime')
+          .get(),
+        { maxRetries: 3, exponentialBackoff: true }
+      );
 
       return response.value.map((event: any) => ({
         id: event.id,
@@ -192,7 +206,7 @@ export class OutlookSync {
         location: event.location?.displayName || '',
       }));
     } catch (error) {
-      console.error('Outlook calendar fetch error:', error);
+      logger.error('Outlook calendar fetch error', { maxResults }, error as Error);
       throw error;
     }
   }
@@ -258,7 +272,7 @@ export async function createActivityFromEmail(
   const match = await matchEmailToCRM(emailToMatch);
 
   if (!match.type || !match.id) {
-    console.log(`No CRM match found for email: ${emailToMatch}`);
+    logger.debug('No CRM match found for email', { email: emailToMatch });
     return null;
   }
 
@@ -315,7 +329,7 @@ export async function createActivityFromCalendarEvent(
   }
 
   if (!match.type || !match.id) {
-    console.log(`No CRM match found for calendar event: ${event.summary}`);
+    logger.debug('No CRM match found for calendar event', { summary: event.summary });
     return null;
   }
 

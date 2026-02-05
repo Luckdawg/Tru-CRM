@@ -36,6 +36,7 @@ import {
   InsertEmailConnection
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { logger } from './_core/logger';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -44,7 +45,7 @@ export async function getDb() {
     try {
       _db = drizzle(process.env.DATABASE_URL);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.warn('Database connection failed', {}, error as Error);
       _db = null;
     }
   }
@@ -60,7 +61,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    logger.warn('Cannot upsert user: database not available', { openId });
     return;
   }
 
@@ -107,7 +108,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error('Failed to upsert user', { openId, name }, error as Error);
     throw error;
   }
 }
@@ -115,7 +116,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
+    logger.warn('Cannot get user: database not available', { openId });
     return undefined;
   }
 
@@ -2482,7 +2483,7 @@ export async function getForecastAccuracyTrendWidget(userId?: number) {
         });
       }
     } catch (error) {
-      console.error('Error calculating forecast accuracy for snapshot:', error);
+      logger.error('Error calculating forecast accuracy for snapshot', { snapshotId: snapshot.id }, error as Error);
       // Continue to next snapshot
     }
   }
@@ -2663,7 +2664,7 @@ export async function createSystemFilterPresets() {
     for (const preset of systemPresets) {
       await db.insert(filterPresets).values(preset);
     }
-    console.log('[FilterPresets] Created system filter presets');
+    logger.info('System filter presets created', { presetCount: systemPresets.length });
   }
 }
 
